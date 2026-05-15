@@ -1,0 +1,14 @@
+{
+  "name": "dungeon-depths",
+  "version": "0.1.0",
+  "description": "Pixel art roguelite dungeon crawler",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "serve": "python3 -m http.server 8091 --directory public"
+  },
+  "devDependencies": {
+    "vitest": "^1.6.0"
+  }
+}
