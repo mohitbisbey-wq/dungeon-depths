@@ -378,9 +378,15 @@ function physStep(obj,plats){
 }
 
 // ── Update helpers ────────────────────────────────────────────────────────────
-const DASH_SPEED=5,DASH_DUR=8;
+const DASH_SPEED=11,DASH_DUR=12;
 function updatePlayer(){
-  if(p.dashTimer>0){p.dashTimer--;return;}
+  if(p.dashCd>0)p.dashCd--;
+  if(p.dashTimer>0){
+    p.dashTimer--;
+    p.vx=DASH_SPEED*p.dashDir;p.vy=0;
+    physStep(p,currentRoom.plats);
+    return;
+  }
   const left=pressed('ArrowLeft')||pressed('KeyA');
   const right=pressed('ArrowRight')||pressed('KeyD');
   const jump=pressed('ArrowUp')||pressed('KeyW')||pressed('Space');
@@ -403,9 +409,8 @@ function updatePlayer(){
     p.dashTimer=DASH_DUR;p.dashCd=cd;
     p.dashDir=p.facingR?1:-1;
     p.vx=DASH_SPEED*p.dashDir;p.vy=0;
-    burst(p.x+PW/2,p.y+PH/2,'#aaf',8);
+    burst(p.x+PW/2,p.y+PH/2,'#aaf',12);
   }
-  if(p.dashCd>0)p.dashCd--;
 
   physStep(p,currentRoom.plats);
 
