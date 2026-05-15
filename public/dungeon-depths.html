@@ -226,7 +226,7 @@ let p={
   onGround:false,
   facingR:true,
   dashTimer:0,dashCd:0,
-  dashDir:0,
+  dashDirX:0,dashDirY:0,
   jumpsLeft:1,
   wallCling:false,
   shieldUp:false,
@@ -237,7 +237,7 @@ const BASE_DASH_CD=24;
 function resetPlayer(sx,sy){
   p.x=sx;p.y=sy;p.vx=0;p.vy=0;
   p.onGround=false;p.facingR=true;
-  p.dashTimer=0;p.dashCd=0;p.dashDir=0;
+  p.dashTimer=0;p.dashCd=0;p.dashDirX=0;p.dashDirY=0;
   p.jumpsLeft=has('dbl_jump')?2:1;
   p.wallCling=false;
   p.shieldUp=has('shield');
@@ -383,13 +383,15 @@ function updatePlayer(){
   if(p.dashCd>0)p.dashCd--;
   if(p.dashTimer>0){
     p.dashTimer--;
-    p.vx=DASH_SPEED*p.dashDir;p.vy=0;
+    p.vx=DASH_SPEED*p.dashDirX;p.vy=DASH_SPEED*p.dashDirY;
     physStep(p,currentRoom.plats);
     return;
   }
   const left=pressed('ArrowLeft')||pressed('KeyA');
   const right=pressed('ArrowRight')||pressed('KeyD');
-  const jump=pressed('ArrowUp')||pressed('KeyW')||pressed('Space');
+  const up=pressed('ArrowUp')||pressed('KeyW');
+  const down=pressed('ArrowDown')||pressed('KeyS');
+  const jump=up||pressed('Space');
   const dashKey=pressed('ShiftLeft')||pressed('ShiftRight');
 
   const spd=has('dash_cd')?2.4:2;
@@ -407,8 +409,12 @@ function updatePlayer(){
   if(dashKey&&p.dashCd===0){
     const cd=has('dash_cd')?Math.round(BASE_DASH_CD*0.7):BASE_DASH_CD;
     p.dashTimer=DASH_DUR;p.dashCd=cd;
-    p.dashDir=p.facingR?1:-1;
-    p.vx=DASH_SPEED*p.dashDir;p.vy=0;
+    let dx=(right?1:0)-(left?1:0);
+    let dy=(down?1:0)-(up?1:0);
+    if(dx===0&&dy===0)dx=p.facingR?1:-1;
+    const len=Math.sqrt(dx*dx+dy*dy);
+    p.dashDirX=dx/len;p.dashDirY=dy/len;
+    p.vx=DASH_SPEED*p.dashDirX;p.vy=DASH_SPEED*p.dashDirY;
     burst(p.x+PW/2,p.y+PH/2,'#aaf',12);
   }
 
@@ -433,7 +439,7 @@ function updateEnemies(){
     // stomp kill
     if(p.stomping&&ov(p.x,p.y,PW,PH,e.x,e.y,e.w,e.h)&&p.vy>0){
       const dmg=has('stomp_dmg')?2:1;
-      e.hp-=dmg;p.vy=-4;
+      e.hp-=dmg;p.vy=-4;p.iframes=20;
       burst(e.x+e.w/2,e.y,'#f84',8);
       if(has('area_stomp')){
         for(const other of enemies){
@@ -573,7 +579,7 @@ function drawPlayer(){
   if(p.dashTimer>0){
     cx.save();cx.shadowColor='#aaf';cx.shadowBlur=6;
     cx.fillStyle='rgba(170,170,255,0.4)';
-    cx.fillRect(px-p.dashDir*8,py+2,PW,PH-4);cx.restore();
+    cx.fillRect(px-p.dashDirX*8,py-p.dashDirY*8,PW,PH-4);cx.restore();
   }
 }
 
