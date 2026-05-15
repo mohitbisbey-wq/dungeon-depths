@@ -127,33 +127,65 @@ let run={
   hp:6,maxHp:6,
   coins:0,shards:0,
   upgrades:[],
-  depth:0,      // rooms cleared this run
-  themeIdx:0,   // current world theme index
-  roomIdx:0,    // room within current theme series
+  weapon:null,   // 'dagger'|'crossbow'|'tome' — null until after grasslands
+  depth:0,
+  themeIdx:0,
+  roomIdx:0,
 };
 function newRun(){
-  run={hp:6,maxHp:6,coins:0,shards:0,upgrades:[],depth:0,themeIdx:0,roomIdx:0};
+  run={hp:6,maxHp:6,coins:0,shards:0,upgrades:[],weapon:null,depth:0,themeIdx:0,roomIdx:0};
 }
 
-// ── Upgrade pool ──────────────────────────────────────────────────────────────
-const UPGRADE_POOL=[
-  {id:'dash_cd',   cat:'movement', name:'QUICK DASH',   desc:'Dash cooldown -30%'},
-  {id:'dbl_jump',  cat:'movement', name:'DOUBLE JUMP',  desc:'Gain a second jump'},
-  {id:'wall_cling',cat:'movement', name:'WALL CLING',   desc:'Slide slowly on walls'},
-  {id:'stomp_dmg', cat:'combat',   name:'HEAVY STOMP',  desc:'Stomp deals 2 damage'},
-  {id:'area_stomp',cat:'combat',   name:'SHOCKWAVE',    desc:'Stomp stuns nearby foes'},
-  {id:'coin_mag',  cat:'combat',   name:'COIN PULL',    desc:'Coins attract to you'},
-  {id:'max_hp',    cat:'survival', name:'IRON HEART',   desc:'Max HP +2'},
-  {id:'regen',     cat:'survival', name:'LIFESTEAL',    desc:'Heal 1 HP on kill'},
-  {id:'shield',    cat:'survival', name:'BARRIER',      desc:'Block one hit per room'},
+// ── Weapons ───────────────────────────────────────────────────────────────────
+const WEAPONS=[
+  {id:'dagger',  name:'DAGGER',   desc:'Fast melee slash',    col:'#4fc3f7'},
+  {id:'crossbow',name:'CROSSBOW', desc:'Fires a piercing bolt',col:'#ffd700'},
+  {id:'tome',    name:'TOME',     desc:'Magic area burst',     col:'#e040fb'},
 ];
+let weaponChoices=[],weaponSelected=0;
+
+// ── Upgrade pool ──────────────────────────────────────────────────────────────
+// universal: always in pool regardless of weapon
+// dagger/crossbow/tome: only available after that weapon is picked
+const UPGRADE_POOL={
+  universal:[
+    {id:'dbl_jump',  cat:'movement', name:'DOUBLE JUMP',  desc:'Gain a second jump'},
+    {id:'wall_cling',cat:'movement', name:'WALL CLING',   desc:'Slide slowly on walls'},
+    {id:'max_hp',    cat:'survival', name:'IRON HEART',   desc:'Max HP +2'},
+    {id:'shield',    cat:'survival', name:'BARRIER',      desc:'Block one hit per room'},
+    {id:'regen',     cat:'survival', name:'LIFESTEAL',    desc:'Heal 1 HP on kill'},
+    {id:'coin_mag',  cat:'survival', name:'COIN PULL',    desc:'Coins attract to you'},
+  ],
+  dagger:[
+    {id:'dash_cd',    cat:'movement', name:'QUICK DASH',   desc:'Dash cooldown -30%'},
+    {id:'fast_blade', cat:'combat',   name:'SWIFT BLADE',  desc:'Attack speed +40%'},
+    {id:'dash_strike',cat:'combat',   name:'BLADE RUSH',   desc:'Dashing damages enemies'},
+    {id:'stomp_dmg',  cat:'combat',   name:'HEAVY STOMP',  desc:'Stomp deals 2 damage'},
+    {id:'area_stomp', cat:'combat',   name:'SHOCKWAVE',    desc:'Stomp stuns nearby foes'},
+  ],
+  crossbow:[
+    {id:'dash_cd',   cat:'movement', name:'QUICK DASH',    desc:'Dash cooldown -30%'},
+    {id:'reload_cd', cat:'combat',   name:'FAST RELOAD',   desc:'Attack speed +40%'},
+    {id:'pierce',    cat:'combat',   name:'PIERCE',        desc:'Bolts hit all enemies'},
+    {id:'multi_shot',cat:'combat',   name:'SCATTER SHOT',  desc:'Fire 3 bolts at once'},
+    {id:'stomp_dmg', cat:'combat',   name:'HEAVY STOMP',   desc:'Stomp deals 2 damage'},
+  ],
+  tome:[
+    {id:'dash_cd',   cat:'movement', name:'QUICK DASH',    desc:'Dash cooldown -30%'},
+    {id:'blast_aoe', cat:'combat',   name:'WIDE BLAST',    desc:'Spell radius +60%'},
+    {id:'stomp_dmg', cat:'combat',   name:'EMPOWERED',     desc:'Spell deals 2 damage'},
+    {id:'area_stomp',cat:'combat',   name:'SHOCKWAVE',     desc:'Spell stuns nearby foes'},
+    {id:'fast_blade',cat:'combat',   name:'SWIFT CAST',    desc:'Cast speed +40%'},
+  ],
+};
 function has(id){return run.upgrades.includes(id);}
 function pickUpgrades(){
-  const pool=UPGRADE_POOL.filter(u=>!has(u.id));
+  const wPool=run.weapon?UPGRADE_POOL[run.weapon]:[];
+  const combined=[...UPGRADE_POOL.universal,...wPool].filter(u=>!has(u.id));
   const out=[];
-  while(out.length<3&&pool.length>0){
-    const i=Math.floor(Math.random()*pool.length);
-    out.push(pool.splice(i,1)[0]);
+  while(out.length<3&&combined.length>0){
+    const i=Math.floor(Math.random()*combined.length);
+    out.push(combined.splice(i,1)[0]);
   }
   return out;
 }
@@ -232,6 +264,7 @@ let p={
   shieldUp:false,
   iframes:0,
   stomping:false,
+  atkTimer:0,atkCd:0,
 };
 const BASE_DASH_CD=24;
 function resetPlayer(sx,sy){
@@ -242,6 +275,7 @@ function resetPlayer(sx,sy){
   p.wallCling=false;
   p.shieldUp=has('shield');
   p.iframes=0;p.stomping=false;
+  p.atkTimer=0;p.atkCd=0;
 }
 
 // ── Enemy instances ────────────────────────────────────────────────────────────
@@ -268,6 +302,7 @@ function spawnEnemies(roomDef,themeIdx){
 
 // ── Drops ─────────────────────────────────────────────────────────────────────
 let drops=[];
+let projectiles=[];
 function spawnDrops(x,y,n){
   for(let i=0;i<n;i++){
     drops.push({x,y,vx:rng(-1.5,1.5),vy:rng(-3,-1),collected:false,type:'coin'});
@@ -312,7 +347,7 @@ function loadRoom(roomDef){
   currentRoom=roomDef;
   exitOpen=false;
   exitX=roomDef.exit[0];exitY=roomDef.exit[1];
-  drops=[];particles=[];
+  drops=[];particles=[];projectiles=[];
   resetPlayer(roomDef.spawn[0],roomDef.spawn[1]);
   spawnEnemies(roomDef,run.themeIdx);
   roomEnemiesCleared=(roomDef.enemyCount===0);
@@ -320,23 +355,33 @@ function loadRoom(roomDef){
   if(has('shield'))p.shieldUp=true;
 }
 
+function advanceTheme(){
+  run.themeIdx++;
+  run.roomIdx=0;
+  if(run.themeIdx>=THEMES.length){fadeTo(()=>{STATE='WIN';});return;}
+  if(run.weapon===null){
+    // first theme done — pick a weapon before entering next world
+    fadeTo(()=>{weaponChoices=WEAPONS;weaponSelected=0;STATE='WEAPON_PICK';});
+    return;
+  }
+  const themeKey=THEME_KEYS[run.themeIdx];
+  const def=pick(ROOM_POOLS[themeKey].filter(r=>r.type!=='boss'));
+  fadeTo(()=>{loadRoom(def);STATE='RUN';});
+}
+
 function nextRoom(){
   run.depth++;
   run.roomIdx++;
   const themeKey=THEME_KEYS[run.themeIdx];
   const pool=ROOM_POOLS[themeKey];
-  // after 3 combat rooms: shop, then boss
   if(run.roomIdx===4){
-    // shop room
     buildShop();
     fadeTo(()=>{STATE='SHOP_SCREEN';});
     return;
   }
   if(run.roomIdx===5){
-    // boss placeholder — for now advance theme
-    run.themeIdx=Math.min(run.themeIdx+1,THEMES.length-1);
-    run.roomIdx=0;
-    if(run.themeIdx>=THEMES.length){fadeTo(()=>{STATE='WIN';});return;}
+    advanceTheme();
+    return;
   }
   const available=pool.filter(r=>r.type!=='boss');
   const def=pick(available);
@@ -379,8 +424,63 @@ function physStep(obj,plats){
 
 // ── Update helpers ────────────────────────────────────────────────────────────
 const DASH_SPEED=11,DASH_DUR=12;
+const BASE_ATK_CD=20,CROSSBOW_ATK_CD=35,TOME_ATK_CD=30;
+
+function daggerHit(){
+  const sx=p.facingR?p.x+PW:p.x-14;
+  for(let i=enemies.length-1;i>=0;i--){
+    const e=enemies[i];
+    if(ov(sx,p.y,14,PH,e.x,e.y,e.w,e.h)){
+      const dmg=has('stomp_dmg')?2:1;
+      e.hp-=dmg;
+      burst(e.x+e.w/2,e.y+e.h/2,'#4fc3f7',6);
+      if(e.hp<=0){
+        spawnDrops(e.x+e.w/2,e.y,e.dropCoins);
+        if(Math.random()<0.15)spawnShard(e.x+e.w/2,e.y);
+        if(has('regen')&&run.hp<run.maxHp)run.hp++;
+        burst(e.x+e.w/2,e.y,'#4fc3f7',10);
+        enemies.splice(i,1);
+      }
+    }
+  }
+}
+
+function updateProjectiles(){
+  for(let i=projectiles.length-1;i>=0;i--){
+    const proj=projectiles[i];
+    proj.x+=proj.vx;proj.y+=proj.vy;
+    proj.life--;
+    if(proj.x<0||proj.x>W||proj.y<0||proj.y>H||proj.life<=0){
+      projectiles.splice(i,1);continue;
+    }
+    let dead=false;
+    for(const [px,py,pw,ph] of currentRoom.plats){
+      if(ov(proj.x,proj.y,4,3,px,py,pw,ph)){dead=true;break;}
+    }
+    if(dead){projectiles.splice(i,1);continue;}
+    for(let j=enemies.length-1;j>=0;j--){
+      const e=enemies[j];
+      if(ov(proj.x,proj.y,4,3,e.x,e.y,e.w,e.h)){
+        e.hp--;
+        burst(e.x+e.w/2,e.y+e.h/2,'#ffd700',6);
+        if(e.hp<=0){
+          spawnDrops(e.x+e.w/2,e.y,e.dropCoins);
+          if(Math.random()<0.15)spawnShard(e.x+e.w/2,e.y);
+          if(has('regen')&&run.hp<run.maxHp)run.hp++;
+          burst(e.x+e.w/2,e.y,'#ffd700',10);
+          enemies.splice(j,1);
+        }
+        if(!proj.pierce){dead=true;break;}
+      }
+    }
+    if(dead)projectiles.splice(i,1);
+  }
+}
+
 function updatePlayer(){
   if(p.dashCd>0)p.dashCd--;
+  if(p.atkCd>0)p.atkCd--;
+  if(p.atkTimer>0)p.atkTimer--;
   if(p.dashTimer>0){
     p.dashTimer--;
     p.vx=DASH_SPEED*p.dashDirX;p.vy=DASH_SPEED*p.dashDirY;
@@ -393,6 +493,7 @@ function updatePlayer(){
   const down=pressed('ArrowDown')||pressed('KeyS');
   const jump=up||pressed('Space');
   const dashKey=pressed('ShiftLeft')||pressed('ShiftRight');
+  const atkKey=pressed('KeyZ')||pressed('KeyX');
 
   const spd=has('dash_cd')?2.4:2;
   if(left){p.vx=lerp(p.vx,-spd,0.3);p.facingR=false;}
@@ -406,7 +507,48 @@ function updatePlayer(){
   }
   if(!jump)keys['_jHeld']=false;
 
-  if(dashKey&&p.dashCd===0){
+  // weapon attack (Z/X)
+  if(atkKey&&p.atkCd===0&&run.weapon){
+    const cdMult=has('fast_blade')||has('reload_cd')?0.6:1;
+    if(run.weapon==='dagger'){
+      p.atkTimer=8;p.atkCd=Math.round(BASE_ATK_CD*cdMult);
+      daggerHit();
+    } else if(run.weapon==='crossbow'){
+      p.atkCd=Math.round(CROSSBOW_ATK_CD*cdMult);
+      const dir=p.facingR?1:-1;
+      const angles=has('multi_shot')?[-0.25,0,0.25]:[0];
+      for(const ang of angles){
+        projectiles.push({x:p.x+PW/2,y:p.y+PH/2,
+          vx:dir*5*Math.cos(ang),vy:5*Math.sin(ang),
+          pierce:has('pierce'),life:80});
+      }
+      burst(p.x+(p.facingR?PW:0),p.y+PH/2,'#ffd700',5);
+    } else if(run.weapon==='tome'){
+      p.atkTimer=14;p.atkCd=Math.round(TOME_ATK_CD*cdMult);
+      const radius=has('blast_aoe')?80:50;
+      const dmg=has('stomp_dmg')?2:1;
+      burst(p.x+PW/2,p.y+PH/2,'#e040fb',20);
+      for(let i=enemies.length-1;i>=0;i--){
+        const e=enemies[i];
+        const dx=(e.x+e.w/2)-(p.x+PW/2),dy=(e.y+e.h/2)-(p.y+PH/2);
+        if(Math.sqrt(dx*dx+dy*dy)<radius){
+          e.hp-=dmg;
+          if(has('area_stomp'))e.stunTimer=60;
+          burst(e.x+e.w/2,e.y+e.h/2,'#e040fb',6);
+          if(e.hp<=0){
+            spawnDrops(e.x+e.w/2,e.y,e.dropCoins);
+            if(Math.random()<0.15)spawnShard(e.x+e.w/2,e.y);
+            if(has('regen')&&run.hp<run.maxHp)run.hp++;
+            burst(e.x+e.w/2,e.y,'#e040fb',10);
+            enemies.splice(i,1);
+          }
+        }
+      }
+    }
+  }
+
+  // dash — only unlocked after weapon pick
+  if(dashKey&&p.dashCd===0&&run.weapon!==null){
     const cd=has('dash_cd')?Math.round(BASE_DASH_CD*0.7):BASE_DASH_CD;
     p.dashTimer=DASH_DUR;p.dashCd=cd;
     let dx=(right?1:0)-(left?1:0);
@@ -435,6 +577,22 @@ function updateEnemies(){
     if(e.x<=e.platX){e.vx=Math.abs(e.vx);}
     if(e.x+e.w>=e.platRight){e.vx=-Math.abs(e.vx);}
     physStep(e,currentRoom.plats);
+
+    // dash strike (dagger upgrade)
+    if(has('dash_strike')&&p.dashTimer>0&&p.iframes===0){
+      if(ov(p.x,p.y,PW,PH,e.x,e.y,e.w,e.h)){
+        e.hp--;p.iframes=10;
+        burst(e.x+e.w/2,e.y+e.h/2,'#aaf',6);
+        if(e.hp<=0){
+          spawnDrops(e.x+e.w/2,e.y,e.dropCoins);
+          if(Math.random()<0.15)spawnShard(e.x+e.w/2,e.y);
+          if(has('regen')&&run.hp<run.maxHp)run.hp++;
+          burst(e.x+e.w/2,e.y,'#aaf',10);
+          enemies.splice(i,1);
+        }
+        continue;
+      }
+    }
 
     // stomp kill
     if(p.stomping&&ov(p.x,p.y,PW,PH,e.x,e.y,e.w,e.h)&&p.vy>0){
@@ -581,6 +739,19 @@ function drawPlayer(){
     cx.fillStyle='rgba(170,170,255,0.4)';
     cx.fillRect(px-p.dashDirX*8,py-p.dashDirY*8,PW,PH-4);cx.restore();
   }
+  // weapon attack visual
+  if(p.atkTimer>0){
+    if(run.weapon==='dagger'){
+      cx.save();cx.shadowColor='#4fc3f7';cx.shadowBlur=10;
+      cx.fillStyle='rgba(79,195,247,0.75)';
+      cx.fillRect(p.facingR?px+PW:px-14,py+2,14,10);cx.restore();
+    } else if(run.weapon==='tome'){
+      const r=has('blast_aoe')?80:50;
+      cx.save();cx.strokeStyle='rgba(224,64,251,0.5)';
+      cx.shadowColor='#e040fb';cx.shadowBlur=14;cx.lineWidth=2;
+      cx.beginPath();cx.arc(px+PW/2,py+PH/2,r,0,Math.PI*2);cx.stroke();cx.restore();
+    }
+  }
 }
 
 function drawEnemies(theme){
@@ -602,6 +773,15 @@ function drawDrops(){
     const col=d.type==='coin'?'#ffd700':'#e040fb';
     cx.save();cx.shadowColor=col;cx.shadowBlur=8;
     cx.fillStyle=col;cx.fillRect(Math.round(d.x),Math.round(d.y),4,4);
+    cx.restore();
+  }
+}
+
+function drawProjectiles(){
+  for(const proj of projectiles){
+    cx.save();cx.shadowColor='#ffd700';cx.shadowBlur=6;
+    cx.fillStyle='#fff';
+    cx.fillRect(Math.round(proj.x-2),Math.round(proj.y-1),4,3);
     cx.restore();
   }
 }
@@ -646,6 +826,20 @@ function drawHUD(){
   const tc=THEMES[run.themeIdx].accent;
   cx.save();cx.shadowColor=tc;cx.shadowBlur=8;
   txt(tn,Math.round((W-txtW(tn))/2),4,tc);cx.restore();
+  // weapon indicator (bottom right)
+  if(run.weapon){
+    const wc={dagger:'#4fc3f7',crossbow:'#ffd700',tome:'#e040fb'}[run.weapon];
+    const wn={dagger:'DAGGER',crossbow:'CROSSBOW',tome:'TOME'}[run.weapon];
+    cx.save();cx.shadowColor=wc;cx.shadowBlur=6;
+    txt(wn,W-txtW(wn)-4,H-12,wc);cx.restore();
+    // attack cooldown bar
+    const maxCd=run.weapon==='crossbow'?CROSSBOW_ATK_CD:run.weapon==='tome'?TOME_ATK_CD:BASE_ATK_CD;
+    const pct=1-p.atkCd/maxCd;
+    cx.fillStyle='#222';cx.fillRect(W-44,H-5,40,3);
+    cx.fillStyle=wc;cx.fillRect(W-44,H-5,Math.round(pct*40),3);
+  } else {
+    txt('Z-ATK DASH',4,H-10,'#333');
+  }
 }
 
 function drawParticles(){
@@ -689,6 +883,7 @@ function update(ts){
   if(STATE==='RUN'){
     updatePlayer();
     updateEnemies();
+    updateProjectiles();
     updateDrops();
     updateParticles();
     checkExit();
@@ -708,11 +903,14 @@ function drawFrame(){
     drawBg(theme);
     drawPlats(currentRoom.plats,theme);
     drawDrops();
+    drawProjectiles();
     drawExit();
     drawEnemies(theme);
     drawPlayer();
     drawParticles();
     drawHUD();
+  } else if(STATE==='WEAPON_PICK'){
+    drawWeaponPick();
   } else if(STATE==='UPGRADE_PICK'){
     drawUpgradePick();
   } else if(STATE==='SHOP_SCREEN'){
@@ -765,6 +963,31 @@ function drawUpgradePick(){
   txtC('LEFT/RIGHT TO BROWSE  SPACE TO PICK',200,'#555');
 }
 
+function drawWeaponPick(){
+  cx.fillStyle='#0a0a0f';cx.fillRect(0,0,W,H);
+  cx.save();cx.shadowColor='#ffd700';cx.shadowBlur=10;
+  txtC('CHOOSE YOUR WEAPON',16,'#ffd700');cx.restore();
+  txtC('ALSO UNLOCKS DASH',26,'#555');
+  for(let i=0;i<WEAPONS.length;i++){
+    const w=WEAPONS[i];
+    const x=8+i*104,y=44,ww=100,wh=130;
+    const sel=i===weaponSelected;
+    cx.fillStyle=sel?'#0d0d1f':'#0a0a0a';cx.fillRect(x,y,ww,wh);
+    cx.strokeStyle=sel?w.col:'#333';cx.lineWidth=sel?2:1;cx.strokeRect(x,y,ww,wh);
+    cx.save();if(sel){cx.shadowColor=w.col;cx.shadowBlur=10;}
+    txt(w.name,x+4,y+8,sel?w.col:'#888',1);cx.restore();
+    txt(w.desc,x+4,y+22,'#555');
+    txt('Z OR X TO ATTACK',x+4,y+36,'#444');
+    // upgrade tree preview
+    txt('UPGRADES:',x+4,y+54,'#444');
+    const pool=UPGRADE_POOL[w.id];
+    for(let u=0;u<Math.min(pool.length,4);u++){
+      txt(pool[u].name,x+4,y+64+u*14,sel?'#666':'#333');
+    }
+  }
+  txtC('LEFT-RIGHT  SPACE TO CHOOSE',196,'#444');
+}
+
 function drawShop(){
   cx.fillStyle='#0a0a0f';cx.fillRect(0,0,W,H);
   txtC('SHOP',20,'#ffd700',2);
@@ -807,6 +1030,15 @@ window.addEventListener('keydown',e=>{
       const def=pick(ROOM_POOLS.grasslands.filter(r=>r.type!=='boss'));
       fadeTo(()=>{loadRoom(def);STATE='RUN';});
     }
+  } else if(STATE==='WEAPON_PICK'){
+    if(e.code==='ArrowLeft'||e.code==='KeyA')weaponSelected=(weaponSelected+WEAPONS.length-1)%WEAPONS.length;
+    if(e.code==='ArrowRight'||e.code==='KeyD')weaponSelected=(weaponSelected+1)%WEAPONS.length;
+    if(e.code==='Space'){
+      run.weapon=WEAPONS[weaponSelected].id;
+      const themeKey=THEME_KEYS[run.themeIdx];
+      const def=pick(ROOM_POOLS[themeKey].filter(r=>r.type!=='boss'));
+      fadeTo(()=>{loadRoom(def);STATE='RUN';});
+    }
   } else if(STATE==='UPGRADE_PICK'){
     if(e.code==='ArrowLeft'||e.code==='KeyA')upgradeSelected=(upgradeSelected+upgradeChoices.length-1)%upgradeChoices.length;
     if(e.code==='ArrowRight'||e.code==='KeyD')upgradeSelected=(upgradeSelected+1)%upgradeChoices.length;
@@ -827,15 +1059,7 @@ window.addEventListener('keydown',e=>{
         if(it.id==='upgrade'){upgradeChoices=pickUpgrades();upgradeSelected=0;STATE='UPGRADE_PICK';}
       }
     }
-    if(e.code==='Escape'){
-      // leave shop → boss room (placeholder: skip to next theme)
-      run.themeIdx=Math.min(run.themeIdx+1,THEMES.length-1);
-      run.roomIdx=0;
-      if(run.themeIdx>=THEMES.length){fadeTo(()=>{STATE='WIN';});return;}
-      const themeKey=THEME_KEYS[run.themeIdx];
-      const def=pick(ROOM_POOLS[themeKey].filter(r=>r.type!=='boss'));
-      fadeTo(()=>{loadRoom(def);STATE='RUN';});
-    }
+    if(e.code==='Escape'){advanceTheme();}
   } else if(STATE==='GAME_OVER'||STATE==='WIN'){
     if(e.code==='Space'){
       if(run.depth>meta.deepest){meta.deepest=run.depth;saveMeta();}
