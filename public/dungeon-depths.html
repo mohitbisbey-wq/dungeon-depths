@@ -817,12 +817,12 @@ function spawnBoss(themeIdx){
   bossEntity=null;
   p.iframes=120;
   const cfgs=[
-    {name:'THE GREAT SLIME',     hp:8, nSpd:0.9,rSpd:1.8,jN:120,jR:80,mc:2,wpn:false,rAt:0.5, cIf:90,w:28,h:20,atk:null},
+    {name:'THE GREAT SLIME',     hp:6, nSpd:0.8,rSpd:1.4,jN:100,jR:70,mc:1,wpn:true, rAt:0.5, cIf:90,w:28,h:20,atk:null},
     {name:'THE GEAR TITAN',      hp:12,nSpd:1.2,rSpd:2.2,jN:100,jR:60,mc:3,wpn:true, rAt:0.5, cIf:80,w:30,h:22,atk:'shot'},
     {name:'THE FROST GOLEM',     hp:16,nSpd:1.4,rSpd:2.6,jN:90, jR:50,mc:4,wpn:true, rAt:0.5, cIf:75,w:32,h:24,atk:'shot'},
     {name:'THE TEMPEST',         hp:20,nSpd:1.6,rSpd:3.0,jN:80, jR:40,mc:5,wpn:true, rAt:0.55,cIf:70,w:30,h:22,atk:'fan3'},
     {name:'THE CRYSTAL COLOSSUS',hp:24,nSpd:1.8,rSpd:3.4,jN:70, jR:30,mc:6,wpn:true, rAt:0.6, cIf:60,w:34,h:26,atk:'fan3'},
-    {name:'THE LEVIATHAN',       hp:28,nSpd:2.0,rSpd:3.8,jN:60, jR:28,mc:7,wpn:true, rAt:0.6, cIf:55,w:36,h:28,atk:'fan5'},
+    {name:'THE LEVIATHAN',       hp:28,nSpd:1.1,rSpd:2.2,jN:60, jR:28,mc:7,wpn:true, rAt:0.6, cIf:55,w:52,h:10,atk:'fan5'},
     {name:'THE MAGMA TITAN',     hp:32,nSpd:2.2,rSpd:4.2,jN:55, jR:24,mc:8,wpn:true, rAt:0.65,cIf:50,w:38,h:30,atk:'pool'},
     {name:'THE VOID LORD',       hp:36,nSpd:2.4,rSpd:4.6,jN:50, jR:20,mc:9,wpn:true, rAt:0.65,cIf:45,w:34,h:28,atk:'phase'},
     {name:'THE ETERNAL',         hp:40,nSpd:2.6,rSpd:5.0,jN:45, jR:16,mc:10,wpn:true,rAt:0.7, cIf:40,w:38,h:32,atk:'beam'},
@@ -840,6 +840,7 @@ function spawnBoss(themeIdx){
     atkCd:0,phased:false,phaseTimer:360,
     chargeState:'idle',chargeTimer:180,
     diveState:'hovering',diveTimer:200,floatY:80,
+    telegraphTimer:0,telegraphTargets:[],icicles:[],bolts:[],pullTimer:0,
   };
   bossTimer=0;runHpAtBossEnter=run.hp;
 }
@@ -873,6 +874,108 @@ function updateBoss(){
   const rage=b.hp<=b.maxHp*b.rAt;
   const spd=rage?b.rSpd:b.nSpd;
   const ti=curTI();
+
+  // ── Gear Titan archetype: THE GEAR TITAN (themeIdx 1) ───────────────────────
+  if(ti===1){
+    if(b.onGround)b.vx=Math.sign(b.vx||1)*spd;
+    if(b.x<=2)b.vx=Math.abs(b.vx);
+    if(b.x+b.w>=roomW-2)b.vx=-Math.abs(b.vx);
+    b.jumpTimer--;
+    if(b.jumpTimer<=0&&b.onGround){b.vy=-7;b.vx=(p.x>b.x?1:-1)*spd;b.jumpTimer=rage?b.jR:b.jN;}
+    physStep(b,getAllPlats());
+    if(b.telegraphTimer>0){
+      b.telegraphTimer--;
+      if(b.telegraphTimer===0){
+        const fy=currentRoom.plats.reduce((best,pl)=>pl[1]<225&&pl[1]>best?pl[1]:best,0)||224;
+        for(const tx of b.telegraphTargets){hazards.push({x:tx-14,y:fy-6,w:28,h:8,timer:220,col:'#c87020'});burst(tx,fy,'#e6be85',8);}
+        sfx('hit');b.telegraphTargets=[];
+      }
+    }
+    b.atkCd--;
+    if(b.atkCd<=0&&b.onGround&&b.telegraphTimer===0){
+      b.atkCd=rage?90:150;
+      const cx2=clamp(p.x+PW/2,20,roomW-20);
+      b.telegraphTargets=rage?[clamp(cx2-32,20,roomW-20),cx2,clamp(cx2+32,20,roomW-20)]:[cx2];
+      b.telegraphTimer=TELEGRAPH_FRAMES;sfx('hurt');
+    }
+    if(rage&&!b.spawnedMinions){b.spawnedMinions=true;for(let i=0;i<b.mc;i++){const side=i%2===0?-1:1;const gap=24+Math.floor(i/2)*16;const mx=b.x+(side<0?-gap:b.w+gap-10);enemies.push({x:Math.max(0,Math.min(roomW-10,mx)),y:b.y,vx:side*0.7,vy:-3,w:10,h:14,hp:2,type:'minion',platX:0,platRight:roomW,onGround:false,stunTimer:0,dropCoins:1});}burst(b.x+b.w/2,b.y,THEMES[ti].accent,16);}
+    if(p.stomping&&p.vy>0&&b.iframes===0&&ov(p.x,p.y,PW,PH,b.x,b.y,b.w,b.h)){b.hp--;b.iframes=40;p.vy=-7;p.iframes=40;burst(b.x+b.w/2,b.y,THEMES[ti].accent,10);if(b.hp<=0){bossDie(b);}return;}
+    if(ov(p.x,p.y,PW,PH,b.x,b.y,b.w,b.h)&&p.iframes===0&&!p.stomping){if(p.shieldUp){p.shieldUp=false;}else{run.hp--;p.iframes=b.cIf;sfx('hurt');burst(p.x+PW/2,p.y+PH/2,'#f44',10);}if(run.hp<=0){fadeTo(()=>{STATE='GAME_OVER';});}}
+    bossTimer++;return;
+  }
+
+  // ── Frost Golem archetype: THE FROST GOLEM (themeIdx 2) ─────────────────────
+  if(ti===2){
+    if(b.onGround)b.vx=Math.sign(b.vx||1)*spd;
+    if(b.x<=2)b.vx=Math.abs(b.vx);
+    if(b.x+b.w>=roomW-2)b.vx=-Math.abs(b.vx);
+    b.jumpTimer--;
+    if(b.jumpTimer<=0&&b.onGround){b.vy=-7;b.vx=(p.x>b.x?1:-1)*spd;b.jumpTimer=rage?b.jR:b.jN;}
+    physStep(b,getAllPlats());
+    const fy2=currentRoom.plats.reduce((best,pl)=>pl[1]<225&&pl[1]>best?pl[1]:best,0)||224;
+    for(let i=b.icicles.length-1;i>=0;i--){
+      const ic=b.icicles[i];ic.y+=ic.vy;ic.life--;
+      if(ic.y+ic.h>=fy2||ic.life<=0){
+        if(ic.y+ic.h>=fy2){hazards.push({x:ic.x,y:fy2-ic.h,w:ic.w,h:ic.h,timer:180,col:'#80d8ff'});burst(ic.x+ic.w/2,fy2,'#80d8ff',8);}
+        b.icicles.splice(i,1);continue;
+      }
+      if(p.iframes===0&&ov(p.x,p.y,PW,PH,ic.x,ic.y,ic.w,ic.h)){
+        if(p.shieldUp){p.shieldUp=false;}else{run.hp--;p.iframes=60;sfx('hurt');burst(p.x+PW/2,p.y+PH/2,'#f44',10);}
+        if(run.hp<=0)fadeTo(()=>{STATE='GAME_OVER';});
+        b.icicles.splice(i,1);
+      }
+    }
+    if(b.telegraphTimer>0){
+      b.telegraphTimer--;
+      if(b.telegraphTimer===0){for(const tx of b.telegraphTargets)b.icicles.push({x:tx-4,y:WORLD_YOFF,w:8,h:20,vy:3,life:80});sfx('hurt');b.telegraphTargets=[];}
+    }
+    b.atkCd--;
+    if(b.atkCd<=0&&b.onGround&&b.telegraphTimer===0){
+      b.atkCd=rage?80:140;
+      const cx2=clamp(p.x+PW/2,20,roomW-20);
+      b.telegraphTargets=rage?[clamp(cx2-24,20,roomW-20),cx2,clamp(cx2+24,20,roomW-20)]:[cx2];
+      b.telegraphTimer=TELEGRAPH_FRAMES;
+    }
+    if(rage&&!b.spawnedMinions){b.spawnedMinions=true;for(let i=0;i<b.mc;i++){const side=i%2===0?-1:1;const gap=24+Math.floor(i/2)*16;const mx=b.x+(side<0?-gap:b.w+gap-10);enemies.push({x:Math.max(0,Math.min(roomW-10,mx)),y:b.y,vx:side*0.7,vy:-3,w:10,h:14,hp:2,type:'minion',platX:0,platRight:roomW,onGround:false,stunTimer:0,dropCoins:1});}burst(b.x+b.w/2,b.y,THEMES[ti].accent,16);}
+    if(p.stomping&&p.vy>0&&b.iframes===0&&ov(p.x,p.y,PW,PH,b.x,b.y,b.w,b.h)){b.hp--;b.iframes=40;p.vy=-7;p.iframes=40;burst(b.x+b.w/2,b.y,THEMES[ti].accent,10);if(b.hp<=0){bossDie(b);}return;}
+    if(ov(p.x,p.y,PW,PH,b.x,b.y,b.w,b.h)&&p.iframes===0&&!p.stomping){if(p.shieldUp){p.shieldUp=false;}else{run.hp--;p.iframes=b.cIf;sfx('hurt');burst(p.x+PW/2,p.y+PH/2,'#f44',10);}if(run.hp<=0){fadeTo(()=>{STATE='GAME_OVER';});}}
+    bossTimer++;return;
+  }
+
+  // ── Crystal Colossus archetype: THE CRYSTAL COLOSSUS (themeIdx 4) ────────────
+  if(ti===4){
+    if(b.onGround)b.vx=Math.sign(b.vx||1)*spd;
+    if(b.x<=2)b.vx=Math.abs(b.vx);
+    if(b.x+b.w>=roomW-2)b.vx=-Math.abs(b.vx);
+    b.jumpTimer--;
+    if(b.jumpTimer<=0&&b.onGround){b.vy=-7;b.vx=(p.x>b.x?1:-1)*spd;b.jumpTimer=rage?b.jR:b.jN;}
+    physStep(b,getAllPlats());
+    for(let i=b.bolts.length-1;i>=0;i--){
+      const bolt=b.bolts[i];bolt.x+=bolt.vx;bolt.y+=bolt.vy;bolt.life--;
+      if(bolt.x<=0){bolt.vx=Math.abs(bolt.vx);bolt.bounceLeft--;burst(bolt.x,bolt.y,'#e040fb',4);}
+      if(bolt.x>=roomW){bolt.vx=-Math.abs(bolt.vx);bolt.bounceLeft--;burst(bolt.x,bolt.y,'#e040fb',4);}
+      if(bolt.bounceLeft<0||bolt.life<=0){b.bolts.splice(i,1);continue;}
+      let bHit=false;for(const[px2,py2,pw2,ph2] of currentRoom.plats){if(ov(bolt.x-3,bolt.y-3,6,6,px2,py2,pw2,ph2)){bHit=true;break;}}
+      if(bHit){b.bolts.splice(i,1);continue;}
+      if(p.iframes===0&&ov(p.x,p.y,PW,PH,bolt.x-4,bolt.y-4,8,8)){
+        if(p.shieldUp){p.shieldUp=false;}else{run.hp--;p.iframes=60;sfx('hurt');burst(p.x+PW/2,p.y+PH/2,'#f44',10);}
+        if(run.hp<=0)fadeTo(()=>{STATE='GAME_OVER';});
+        b.bolts.splice(i,1);
+      }
+    }
+    b.atkCd--;
+    if(b.atkCd<=0){
+      b.atkCd=rage?80:140;
+      const bx2=b.x+b.w/2,by2=b.y+b.h/2;
+      const dx=(p.x+PW/2)-bx2,dy=(p.y+PH/2)-by2;const dist=Math.sqrt(dx*dx+dy*dy)||1;
+      for(const a of (rage?[-0.4,0,0.4]:[0])){const cos=Math.cos(a),sin=Math.sin(a);b.bolts.push({x:bx2,y:by2,vx:dx/dist*3.5*cos-dy/dist*3.5*sin,vy:dx/dist*3.5*sin+dy/dist*3.5*cos,bounceLeft:2,life:220});}
+      burst(bx2,by2,THEMES[ti].accent,10);sfx('hit');
+    }
+    if(rage&&!b.spawnedMinions){b.spawnedMinions=true;for(let i=0;i<b.mc;i++){const side=i%2===0?-1:1;const gap=24+Math.floor(i/2)*16;const mx=b.x+(side<0?-gap:b.w+gap-10);enemies.push({x:Math.max(0,Math.min(roomW-10,mx)),y:b.y,vx:side*0.7,vy:-3,w:10,h:14,hp:2,type:'minion',platX:0,platRight:roomW,onGround:false,stunTimer:0,dropCoins:1});}burst(b.x+b.w/2,b.y,THEMES[ti].accent,16);}
+    if(p.stomping&&p.vy>0&&b.iframes===0&&ov(p.x,p.y,PW,PH,b.x,b.y,b.w,b.h)){b.hp--;b.iframes=40;p.vy=-7;p.iframes=40;burst(b.x+b.w/2,b.y,THEMES[ti].accent,10);if(b.hp<=0){bossDie(b);}return;}
+    if(ov(p.x,p.y,PW,PH,b.x,b.y,b.w,b.h)&&p.iframes===0&&!p.stomping){if(p.shieldUp){p.shieldUp=false;}else{run.hp--;p.iframes=b.cIf;sfx('hurt');burst(p.x+PW/2,p.y+PH/2,'#f44',10);}if(run.hp<=0){fadeTo(()=>{STATE='GAME_OVER';});}}
+    bossTimer++;return;
+  }
 
   // ── Charger archetype: THE MAGMA TITAN (themeIdx 6) ──────────────────────────
   if(ti===6){
@@ -977,6 +1080,109 @@ function updateBoss(){
     return;
   }
 
+  // ── Tempest archetype: THE TEMPEST (themeIdx 3) ─────────────────────────────
+  if(ti===3){
+    if(b.onGround)b.vx=Math.sign(b.vx||1)*spd;
+    if(b.x<=2)b.vx=Math.abs(b.vx);
+    if(b.x+b.w>=roomW-2)b.vx=-Math.abs(b.vx);
+    b.jumpTimer--;
+    if(b.jumpTimer<=0&&b.onGround){b.vy=-7;b.vx=(p.x>b.x?1:-1)*spd;b.jumpTimer=rage?b.jR:b.jN;}
+    physStep(b,getAllPlats());
+    // Lightning telegraph → instant bolt
+    if(b.telegraphTimer>0){
+      b.telegraphTimer--;
+      if(b.telegraphTimer===0){
+        for(const tx of b.telegraphTargets){hazards.push({x:tx-3,y:WORLD_YOFF,w:6,h:220,timer:14,col:'#c0e0ff'});burst(tx,WORLD_YOFF+40,'#ffffff',12);}
+        sfx('hit');b.telegraphTargets=[];
+      }
+    }
+    b.atkCd--;
+    if(b.atkCd<=0&&b.telegraphTimer===0){
+      b.atkCd=rage?80:140;
+      const cx2=clamp(p.x+PW/2,10,roomW-10);
+      b.telegraphTargets=rage?[clamp(cx2-28,10,roomW-10),cx2,clamp(cx2+28,10,roomW-10)]:[cx2];
+      b.telegraphTimer=TELEGRAPH_FRAMES;sfx('hurt');
+      const th=THEMES[ti];const bx2=b.x+b.w/2,by2=b.y+b.h/2;
+      const dx=(p.x+PW/2)-bx2,dy=(p.y+PH/2)-by2;const dist=Math.sqrt(dx*dx+dy*dy)||1;
+      for(const a of (rage?[-0.4,0,0.4]:[0])){const cos=Math.cos(a),sin=Math.sin(a);enemyProjs.push({x:bx2,y:by2,vx:dx/dist*3*cos-dy/dist*3*sin,vy:dx/dist*3*sin+dy/dist*3*cos,life:110,col:th.accent,r:3});}
+    }
+    if(rage&&!b.spawnedMinions){b.spawnedMinions=true;for(let i=0;i<b.mc;i++){const side=i%2===0?-1:1;const gap=24+Math.floor(i/2)*16;const mx=b.x+(side<0?-gap:b.w+gap-10);enemies.push({x:Math.max(0,Math.min(roomW-10,mx)),y:b.y,vx:side*0.7,vy:-3,w:10,h:14,hp:2,type:'minion',platX:0,platRight:roomW,onGround:false,stunTimer:0,dropCoins:1});}burst(b.x+b.w/2,b.y,THEMES[ti].accent,16);}
+    if(p.stomping&&p.vy>0&&b.iframes===0&&ov(p.x,p.y,PW,PH,b.x,b.y,b.w,b.h)){b.hp--;b.iframes=40;p.vy=-7;p.iframes=40;burst(b.x+b.w/2,b.y,THEMES[ti].accent,10);if(b.hp<=0){bossDie(b);}return;}
+    if(ov(p.x,p.y,PW,PH,b.x,b.y,b.w,b.h)&&p.iframes===0&&!p.stomping){if(p.shieldUp){p.shieldUp=false;}else{run.hp--;p.iframes=b.cIf;sfx('hurt');burst(p.x+PW/2,p.y+PH/2,'#f44',10);}if(run.hp<=0){fadeTo(()=>{STATE='GAME_OVER';});}}
+    bossTimer++;return;
+  }
+
+  // ── Leviathan archetype: THE LEVIATHAN (themeIdx 5) ─────────────────────────
+  if(ti===5){
+    const swimSpd=rage?b.rSpd:b.nSpd;
+    // Lunge toward player, then return to patrol
+    if(b.chargeState==='charging'){
+      b.chargeTimer--;
+      if(b.chargeTimer<=0||b.x<=2||b.x+b.w>=roomW-2){b.chargeState='idle';b.chargeTimer=0;b.vx=Math.sign(b.vx||1)*swimSpd;}
+    } else {
+      b.vx=Math.sign(b.vx||1)*swimSpd;
+    }
+    if(b.x<=2)b.vx=Math.abs(b.vx);
+    if(b.x+b.w>=roomW-2)b.vx=-Math.abs(b.vx);
+    b.x=clamp(b.x+b.vx,0,roomW-b.w);
+    // Free-swimming vertical sine wave — no gravity
+    const swimY=WORLD_YOFF+36+Math.sin(bossTimer*0.022)*44+Math.sin(bossTimer*0.057)*11;
+    b.y+=(swimY-b.y)*0.06;b.vy=0;
+    // Void pull
+    if(b.pullTimer>0){b.pullTimer--;const pd=Math.sign((b.x+b.w/2)-(p.x+PW/2));p.vx=clamp(p.vx+pd*(rage?0.7:0.45),-5,5);}
+    // Attack: lunge + fan shot
+    b.atkCd--;
+    if(b.atkCd<=0&&b.chargeState!=='charging'){
+      b.atkCd=rage?100:160;
+      b.chargeState='charging';b.chargeTimer=rage?55:75;
+      b.vx=Math.sign((p.x+PW/2)-(b.x+b.w/2))*swimSpd*2.4;
+      const th=THEMES[ti];const bx2=b.x+b.w/2,by2=b.y+b.h/2;
+      const dx=(p.x+PW/2)-bx2,dy=(p.y+PH/2)-by2;const dist=Math.sqrt(dx*dx+dy*dy)||1;
+      for(const a of(rage?[-0.5,-0.25,0,0.25,0.5]:[-0.3,0,0.3])){const cos=Math.cos(a),sin=Math.sin(a);enemyProjs.push({x:bx2,y:by2,vx:dx/dist*2.8*cos-dy/dist*2.8*sin,vy:dx/dist*2.8*sin+dy/dist*2.8*cos,life:120,col:th.accent,r:3});}
+      b.pullTimer=rage?120:80;burst(bx2,by2,'#00e5cc',10);sfx('hit');
+    }
+    if(rage&&!b.spawnedMinions){b.spawnedMinions=true;for(let i=0;i<b.mc;i++){const side=i%2===0?-1:1;const gap=24+Math.floor(i/2)*16;const mx=b.x+(side<0?-gap:b.w+gap-10);enemies.push({x:Math.max(0,Math.min(roomW-10,mx)),y:b.y,vx:side*0.7,vy:-3,w:10,h:14,hp:2,type:'minion',platX:0,platRight:roomW,onGround:false,stunTimer:0,dropCoins:1});}burst(b.x+b.w/2,b.y,THEMES[ti].accent,16);}
+    if(p.stomping&&p.vy>0&&b.iframes===0&&ov(p.x,p.y,PW,PH,b.x,b.y,b.w,b.h)){b.hp--;b.iframes=40;p.vy=-7;p.iframes=40;burst(b.x+b.w/2,b.y,THEMES[ti].accent,10);if(b.hp<=0){bossDie(b);}return;}
+    if(ov(p.x,p.y,PW,PH,b.x,b.y,b.w,b.h)&&p.iframes===0&&!p.stomping){if(p.shieldUp){p.shieldUp=false;}else{run.hp--;p.iframes=b.cIf;sfx('hurt');burst(p.x+PW/2,p.y+PH/2,'#f44',10);}if(run.hp<=0){fadeTo(()=>{STATE='GAME_OVER';});}}
+    bossTimer++;return;
+  }
+
+  // ── Kraken archetype: THE KRAKEN (themeIdx 9) ───────────────────────────────
+  if(ti===9){
+    // Boss mostly stays in center, drifting slowly; mostly submerged (low floatY)
+    const kFloatY=b.diveState==='submerged'?200:130;
+    const tdx=(p.x+PW/2)-(b.x+b.w/2);
+    b.vx=clamp(b.vx+Math.sign(tdx)*0.05,-spd*0.4,spd*0.4);
+    if(b.x<=2)b.vx=Math.abs(b.vx);
+    if(b.x+b.w>=roomW-2)b.vx=-Math.abs(b.vx);
+    b.y=b.y+(kFloatY-b.y)*0.03;b.vy=0;
+    b.x=clamp(b.x+b.vx,0,roomW-b.w);
+    // Tentacle attack: spawns hazards on left/right sides from bottom
+    if(b.telegraphTimer>0){
+      b.telegraphTimer--;
+      if(b.telegraphTimer===0){
+        const fy=currentRoom.plats.reduce((best,pl)=>pl[1]<225&&pl[1]>best?pl[1]:best,0)||224;
+        for(const tx of b.telegraphTargets){hazards.push({x:tx-5,y:fy-40,w:10,h:44,timer:200,col:'#00e5ff'});burst(tx,fy,'#00e5ff',10);}
+        sfx('hit');b.telegraphTargets=[];b.diveState='submerged';b.diveTimer=rage?60:120;
+      }
+    }
+    if(b.diveState==='submerged'){b.diveTimer--;if(b.diveTimer<=0)b.diveState='hovering';}
+    b.atkCd--;
+    if(b.atkCd<=0&&b.diveState!=='submerged'&&b.telegraphTimer===0){
+      b.atkCd=rage?90:160;
+      const lx=clamp(p.x+PW/2-40,10,roomW-20);const rx=clamp(p.x+PW/2+40,10,roomW-20);
+      b.telegraphTargets=rage?[lx,p.x+PW/2,rx]:[lx,rx];
+      b.telegraphTimer=TELEGRAPH_FRAMES;b.diveState='hovering';
+      const th=THEMES[ti];const bx2=b.x+b.w/2,by2=b.y+b.h/2;
+      const dx=(p.x+PW/2)-bx2,dy=(p.y+PH/2)-by2;const dist=Math.sqrt(dx*dx+dy*dy)||1;
+      for(const a of (rage?[-0.3,0,0.3]:[0])){const cos=Math.cos(a),sin=Math.sin(a);enemyProjs.push({x:bx2,y:by2,vx:dx/dist*2.5*cos-dy/dist*2.5*sin,vy:dx/dist*2.5*sin+dy/dist*2.5*cos,life:110,col:th.accent,r:3});}
+    }
+    if(rage&&!b.spawnedMinions){b.spawnedMinions=true;for(let i=0;i<b.mc;i++){const side=i%2===0?-1:1;const gap=24+Math.floor(i/2)*16;const mx=b.x+(side<0?-gap:b.w+gap-10);enemies.push({x:Math.max(0,Math.min(roomW-10,mx)),y:b.y,vx:side*0.7,vy:-3,w:10,h:14,hp:2,type:'minion',platX:0,platRight:roomW,onGround:false,stunTimer:0,dropCoins:1});}burst(b.x+b.w/2,b.y,THEMES[ti].accent,16);}
+    if(p.stomping&&p.vy>0&&b.iframes===0&&ov(p.x,p.y,PW,PH,b.x,b.y,b.w,b.h)){b.hp--;b.iframes=40;p.vy=-7;p.iframes=40;burst(b.x+b.w/2,b.y,THEMES[ti].accent,10);if(b.hp<=0){bossDie(b);}return;}
+    if(ov(p.x,p.y,PW,PH,b.x,b.y,b.w,b.h)&&p.iframes===0&&!p.stomping){if(p.shieldUp){p.shieldUp=false;}else{run.hp--;p.iframes=b.cIf;sfx('hurt');burst(p.x+PW/2,p.y+PH/2,'#f44',10);}if(run.hp<=0){fadeTo(()=>{STATE='GAME_OVER';});}}
+    bossTimer++;return;
+  }
+
   // ── Default archetype ─────────────────────────────────────────────────────────
   if(b.onGround)b.vx=Math.sign(b.vx||1)*spd;
   if(b.x<=0)b.vx=Math.abs(b.vx);
@@ -1056,6 +1262,7 @@ function updateBoss(){
   }
 }
 
+const TELEGRAPH_FRAMES=36;
 const DASH_SPEED=8,DASH_DUR=7;
 const BASE_ATK_CD=20,CROSSBOW_ATK_CD=35,TOME_ATK_CD=30;
 
@@ -1448,7 +1655,7 @@ function updateEnemyType(e){
       const droneHover=(e.platY||224)-62;
       e.vy+=(droneHover-e.y)*0.04-GRAV;
       e.vy=clamp(e.vy,-3.5,2.5);
-      e.vx=lerp(e.vx,pdx>0?0.9:-0.9,0.04);
+      e.vx=lerp(e.vx,pdx>0?0.65:-0.65,0.04);
       if(e.atkCd<=0){
         e.atkCd=75+Math.floor(Math.random()*35);
         enemyProjs.push({x:ecx,y:e.y+e.h,vx:pdx/pdist,vy:2.8,life:90,col:THEMES[eti].accent,r:2});
@@ -1457,9 +1664,9 @@ function updateEnemyType(e){
     case 'sawbot':
       if(!e.sawCharging&&e.atkCd<=0&&Math.abs(pdx)<150&&e.onGround){
         e.sawCharging=true;e.atkCd=60+Math.floor(Math.random()*30);
-        e.vx=(pdx>0?1:-1)*5;burst(ecx,ecy,'#ff9900',6);sfx('hit');
+        e.vx=(pdx>0?1:-1)*3.5;burst(ecx,ecy,'#ff9900',6);sfx('hit');
       }
-      if(e.sawCharging){e.vx=(e.vx>0?1:-1)*5;if(e.atkCd<=15)e.sawCharging=false;}
+      if(e.sawCharging){e.vx=(e.vx>0?1:-1)*3.5;if(e.atkCd<=15)e.sawCharging=false;}
       break;
     case 'turret':
       e.vx=0;
@@ -2250,42 +2457,71 @@ function drawBoss(){
     cx.fillStyle='#111';cx.fillRect(bx+ox+6,by+oy+6,4,4);cx.fillRect(bx+ox+sw-9,by+oy+6,4,4);
     if(t<0.5){cx.fillStyle='#111';cx.fillRect(bx+ox+4,by+oy+3,5,2);cx.fillRect(bx+ox+sw-9,by+oy+3,5,2);}
   } else if(ti===1){
-    // THE GEAR TITAN — clockwork bronze construct
-    const sw=b.onGround?36:28,sh=b.onGround?18:26;
-    const ox=Math.round((b.w-sw)/2),oy=b.h-sh;
-    const col=t<b.rAt?'#c87020':'#e6be85';
-    cx.save();cx.shadowColor='#e6be85';cx.shadowBlur=16;cx.fillStyle='#5B3C20';cx.fillRect(bx+ox,by+oy,sw,sh);cx.restore();
-    cx.fillStyle=col;cx.fillRect(bx+ox,by+oy,sw,sh);
-    cx.fillStyle='#ffd080';for(let gx=0;gx<4;gx++)cx.fillRect(bx+ox+4+gx*8,by+oy-3,4,4);
-    cx.fillStyle='#7a4010';cx.fillRect(bx+ox+2,by+oy+2,3,3);cx.fillRect(bx+ox+sw-5,by+oy+2,3,3);cx.fillRect(bx+ox+2,by+oy+sh-5,3,3);cx.fillRect(bx+ox+sw-5,by+oy+sh-5,3,3);
-    cx.save();cx.shadowColor='#ff8800';cx.shadowBlur=8;cx.fillStyle='#ff8800';cx.fillRect(bx+ox+5,by+oy+5,8,6);cx.fillRect(bx+ox+sw-13,by+oy+5,8,6);cx.restore();
-    cx.fillStyle='#ffcc44';cx.fillRect(bx+ox+7,by+oy+7,4,2);cx.fillRect(bx+ox+sw-11,by+oy+7,4,2);
-    if(t<b.rAt){cx.fillStyle='#5B3C20';cx.fillRect(bx+ox+5,by+oy+4,5,2);cx.fillRect(bx+ox+sw-10,by+oy+4,5,2);}
+    // THE GEAR TITAN — giant spinning cog
+    const gcx1=(bx+b.w/2)|0,gcy1=(by+b.h/2)|0;
+    const gAng=bossTimer*0.03;
+    const gCol=t<b.rAt?'#c87020':'#e6be85';
+    cx.save();cx.shadowColor=gCol;cx.shadowBlur=22;cx.fillStyle='rgba(0,0,0,0)';cx.beginPath();cx.arc(gcx1,gcy1,17,0,Math.PI*2);cx.fill();cx.restore();
+    cx.fillStyle='#2a1800';cx.beginPath();cx.arc(gcx1,gcy1,15,0,Math.PI*2);cx.fill();
+    rotatingGear(gcx1,gcy1,14,8,gCol,gAng);
+    cx.fillStyle='#3a2000';cx.beginPath();cx.arc(gcx1,gcy1,5.5,0,Math.PI*2);cx.fill();
+    cx.save();cx.shadowColor='#ff8800';cx.shadowBlur=12;cx.fillStyle='#ff8800';cx.beginPath();cx.arc(gcx1,gcy1,3.5,0,Math.PI*2);cx.fill();cx.restore();
+    cx.save();cx.translate(gcx1,gcy1);cx.rotate(gAng);
+    cx.save();cx.shadowColor='#ffcc44';cx.shadowBlur=8;cx.fillStyle='#ff9900';cx.fillRect(-7,-4,4,4);cx.fillRect(3,-4,4,4);cx.fillStyle='#ffe080';cx.fillRect(-6,-3,2,2);cx.fillRect(4,-3,2,2);cx.restore();
+    cx.restore();
+    if(t<b.rAt){cx.save();cx.shadowColor='#ff4400';cx.shadowBlur=14;cx.strokeStyle='#ff6600';cx.lineWidth=1.5;cx.translate(gcx1,gcy1);cx.rotate(gAng);cx.beginPath();cx.moveTo(-2,-8);cx.lineTo(1,0);cx.lineTo(-3,6);cx.stroke();cx.restore();}
+    if(b.telegraphTargets&&b.telegraphTargets.length&&b.telegraphTimer>0){
+      const fy=currentRoom.plats.reduce((best,pl)=>pl[1]<225&&pl[1]>best?pl[1]:best,0)||224;
+      if(Math.floor(sec()*8)%2){cx.save();cx.globalAlpha=0.8;cx.fillStyle='#ffd080';for(const tx of b.telegraphTargets)cx.fillRect(tx-14,fy-8,28,3);cx.restore();}
+    }
   } else if(ti===2){
-    // THE FROST GOLEM — icy blue slab
-    const sw=b.onGround?38:30,sh=b.onGround?20:28;
-    const ox=Math.round((b.w-sw)/2),oy=b.h-sh;
-    const col=t<b.rAt?'#2a6088':'#a0d8f0';
-    cx.save();cx.shadowColor='#80d8ff';cx.shadowBlur=18;cx.fillStyle='#1e3a52';cx.fillRect(bx+ox,by+oy,sw,sh);cx.restore();
-    cx.fillStyle=col;cx.fillRect(bx+ox,by+oy,sw,sh);
-    cx.fillStyle='#c0e8ff';cx.fillRect(bx+ox+4,by+oy-5,4,6);cx.fillRect(bx+ox+14,by+oy-8,4,9);cx.fillRect(bx+ox+sw-8,by+oy-5,4,6);
-    cx.fillStyle='rgba(255,255,255,0.3)';cx.fillRect(bx+ox,by+oy,sw,3);
-    cx.save();cx.shadowColor='#80d8ff';cx.shadowBlur=10;cx.fillStyle='#80d8ff';cx.fillRect(bx+ox+5,by+oy+6,8,6);cx.fillRect(bx+ox+sw-13,by+oy+6,8,6);cx.restore();
-    cx.fillStyle='#ffffff';cx.fillRect(bx+ox+7,by+oy+8,4,2);cx.fillRect(bx+ox+sw-11,by+oy+8,4,2);
-    if(t<b.rAt){cx.fillStyle='#1e3a52';cx.fillRect(bx+ox+5,by+oy+5,5,2);cx.fillRect(bx+ox+sw-10,by+oy+5,5,2);}
+    // THE FROST GOLEM — chunky ice golem
+    const igCol=t<b.rAt?'#2a6088':'#7ac8e8';
+    cx.save();cx.shadowColor='#80d8ff';cx.shadowBlur=20;cx.fillStyle='rgba(0,0,0,0)';cx.beginPath();cx.arc(bx+b.w/2,by+b.h/2,18,0,Math.PI*2);cx.fill();cx.restore();
+    cx.fillStyle=igCol;
+    cx.fillRect(bx+0,by+7,7,8);cx.fillRect(bx+25,by+7,7,8);     // arms
+    cx.fillRect(bx+5,by+6,22,12);                                  // torso
+    cx.fillRect(bx+7,by+17,7,7);cx.fillRect(bx+18,by+17,7,7);    // legs
+    cx.fillRect(bx+9,by,14,10);                                    // head
+    cx.fillStyle='#c0e8ff';
+    cx.fillRect(bx+14,by-6,4,7);cx.fillRect(bx+10,by-4,3,5);cx.fillRect(bx+19,by-4,3,5); // head spikes
+    cx.fillRect(bx+1,by+3,3,5);cx.fillRect(bx+28,by+3,3,5);      // shoulder spikes
+    cx.fillStyle='rgba(255,255,255,0.28)';
+    cx.fillRect(bx+9,by,14,2);cx.fillRect(bx+5,by+6,22,2);cx.fillRect(bx+0,by+7,7,2);cx.fillRect(bx+25,by+7,7,2);
+    cx.save();cx.shadowColor='#80d8ff';cx.shadowBlur=12;cx.fillStyle='#80d8ff';cx.fillRect(bx+10,by+2,4,5);cx.fillRect(bx+18,by+2,4,5);cx.restore();
+    cx.fillStyle='#ffffff';cx.fillRect(bx+11,by+3,2,3);cx.fillRect(bx+19,by+3,2,3);
+    if(t<b.rAt){
+      cx.fillStyle='#1a2e40';cx.fillRect(bx+13,by+7,2,7);cx.fillRect(bx+20,by+8,2,5);cx.fillRect(bx+8,by+14,4,2);
+      cx.save();cx.shadowColor='#a0e8ff';cx.shadowBlur=4;cx.fillStyle='rgba(160,232,255,0.6)';cx.fillRect(bx+13,by+7,1,4);cx.fillRect(bx+20,by+8,1,3);cx.restore();
+    }
+    if(b.telegraphTargets&&b.telegraphTargets.length&&b.telegraphTimer>0){
+      if(Math.floor(sec()*8)%2){cx.save();cx.globalAlpha=0.8;cx.fillStyle='#80d8ff';for(const tx of b.telegraphTargets)cx.fillRect(tx-4,0,8,4);cx.restore();}
+    }
+    for(const ic of b.icicles||[]){cx.save();cx.shadowColor='#80d8ff';cx.shadowBlur=8;cx.fillStyle='#a0e8ff';cx.fillRect(ic.x,ic.y,ic.w,ic.h);cx.fillStyle='#ffffff';cx.fillRect(ic.x+2,ic.y,4,4);cx.restore();}
   } else if(ti===3){
-    // THE TEMPEST — crackling storm entity
-    const fl=Math.floor(sec()*8)%2;
-    const sw=b.onGround?34+fl:26+fl,sh=b.onGround?16+fl:22+fl;
-    const ox=Math.round((b.w-sw)/2),oy=b.h-sh;
-    const col=t<b.rAt?'#3a3a7a':'#6a6ab0';
-    cx.save();cx.shadowColor='#90caf9';cx.shadowBlur=20;cx.fillStyle='#15152a';cx.fillRect(bx+ox,by+oy,sw,sh);cx.restore();
-    cx.fillStyle=col;cx.fillRect(bx+ox,by+oy,sw,sh);
-    cx.fillStyle='#c0e0ff';
-    const mx=bx+ox+(sw>>1);cx.fillRect(mx-1,by+oy-6,2,7);cx.fillRect(mx-4,by+oy-4,4,2);cx.fillRect(mx+1,by+oy-2,4,2);
-    cx.save();cx.shadowColor='#ffffff';cx.shadowBlur=12;cx.fillStyle='#ffffff';cx.fillRect(bx+ox+4,by+oy+4,7,5);cx.fillRect(bx+ox+sw-11,by+oy+4,7,5);cx.restore();
-    cx.fillStyle='#90caf9';cx.fillRect(bx+ox+6,by+oy+6,3,1);cx.fillRect(bx+ox+sw-9,by+oy+6,3,1);
-    if(t<b.rAt){cx.fillStyle='#15152a';cx.fillRect(bx+ox+4,by+oy+3,5,2);cx.fillRect(bx+ox+sw-9,by+oy+3,5,2);}
+    // THE TEMPEST — living storm cloud
+    const gcx3=(bx+b.w/2)|0,gcy3=(by+b.h/2-2)|0;
+    const cDark=t<b.rAt?'#1a1a38':'#2a2a52';const cMid=t<b.rAt?'#35356a':'#5a5aa8';
+    const spark=Math.floor(sec()*8)%2;
+    cx.save();cx.shadowColor='#90caf9';cx.shadowBlur=22;cx.fillStyle='rgba(0,0,0,0)';cx.beginPath();cx.arc(gcx3,gcy3,17,0,Math.PI*2);cx.fill();cx.restore();
+    cx.fillStyle=cDark;
+    cx.beginPath();cx.ellipse(gcx3,gcy3,14,8,0,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.ellipse(gcx3-9,gcy3-4,8,6,0,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.ellipse(gcx3+9,gcy3-4,8,6,0,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.ellipse(gcx3-3,gcy3-9,7,5,0,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.ellipse(gcx3+4,gcy3-9,7,5,0,0,Math.PI*2);cx.fill();
+    cx.fillStyle=cMid;cx.beginPath();cx.ellipse(gcx3-11,gcy3-5,5,3.5,0,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.ellipse(gcx3-2,gcy3-11,5,3.5,0,0,Math.PI*2);cx.fill();
+    cx.fillStyle='rgba(192,224,255,0.18)';cx.beginPath();cx.ellipse(gcx3,gcy3-2,12,6,0,0,Math.PI*2);cx.fill();
+    cx.save();cx.shadowColor='#ffffff';cx.shadowBlur=14;cx.fillStyle='#c0e0ff';cx.fillRect(gcx3-7,gcy3-1,5,5);cx.fillRect(gcx3+3,gcy3-1,5,5);cx.fillStyle='#ffffff';cx.fillRect(gcx3-6,gcy3,3,3);cx.fillRect(gcx3+4,gcy3,3,3);cx.restore();
+    cx.save();cx.shadowColor='#c0e0ff';cx.shadowBlur=10;cx.fillStyle='#c0e0ff';cx.fillRect(gcx3-1,gcy3+8,3,5);cx.fillRect(gcx3-3,gcy3+12,3,5);cx.fillRect(gcx3+1,gcy3+16,3,4);cx.restore();
+    if(spark){cx.save();cx.shadowColor='#ffffff';cx.shadowBlur=8;cx.fillStyle='rgba(255,255,255,0.85)';cx.fillRect(gcx3-13,gcy3+3,3,2);cx.fillRect(gcx3+11,gcy3+3,3,2);cx.fillRect(gcx3-9,gcy3+6,2,2);cx.fillRect(gcx3+8,gcy3+6,2,2);cx.restore();}
+    if(t<b.rAt){cx.save();cx.shadowColor='#ff88ff';cx.shadowBlur=12;cx.strokeStyle='#cc44ff';cx.lineWidth=1.5;cx.beginPath();cx.moveTo(gcx3-7,gcy3-9);cx.lineTo(gcx3-3,gcy3-4);cx.lineTo(gcx3-6,gcy3);cx.stroke();cx.beginPath();cx.moveTo(gcx3+8,gcy3-9);cx.lineTo(gcx3+4,gcy3-4);cx.lineTo(gcx3+7,gcy3);cx.stroke();cx.restore();}
+    if(b.telegraphTargets&&b.telegraphTargets.length&&b.telegraphTimer>0){
+      cx.save();cx.globalAlpha=0.2+0.6*(1-b.telegraphTimer/TELEGRAPH_FRAMES);cx.strokeStyle='#c0e0ff';cx.lineWidth=2;
+      for(const tx of b.telegraphTargets){cx.beginPath();cx.setLineDash([2,3]);cx.moveTo(tx,0);cx.lineTo(tx,220);cx.stroke();}
+      cx.setLineDash([]);cx.restore();
+    }
   } else if(ti===4){
     // THE CRYSTAL COLOSSUS — magenta crystal titan
     const sw=b.onGround?40:32,sh=b.onGround?22:30;
@@ -2298,22 +2534,57 @@ function drawBoss(){
     cx.save();cx.shadowColor='#ff00ff';cx.shadowBlur=14;cx.fillStyle='#ff00ff';cx.fillRect(bx+ox+5,by+oy+5,8,8);cx.fillRect(bx+ox+sw-13,by+oy+5,8,8);cx.restore();
     cx.fillStyle='#fff';cx.fillRect(bx+ox+7,by+oy+7,4,4);cx.fillRect(bx+ox+sw-11,by+oy+7,4,4);
     if(t<b.rAt){cx.fillStyle='#3a1a4a';cx.fillRect(bx+ox+5,by+oy+4,6,2);cx.fillRect(bx+ox+sw-11,by+oy+4,6,2);}
+    for(const bolt of b.bolts||[]){cx.save();cx.shadowColor='#e040fb';cx.shadowBlur=10;cx.fillStyle='#e040fb';cx.beginPath();cx.arc(bolt.x,bolt.y,4,0,Math.PI*2);cx.fill();cx.fillStyle='#ff80ff';cx.beginPath();cx.arc(bolt.x-1,bolt.y-1,2,0,Math.PI*2);cx.fill();cx.restore();}
   } else if(ti===5){
-    // THE LEVIATHAN — deep sea serpent with bioluminescent markings
-    const sw=b.onGround?44:36,sh=b.onGround?22:28;
-    const ox=Math.round((b.w-sw)/2),oy=b.h-sh;
-    const col=t<b.rAt?'#004433':'#006655';
-    cx.save();cx.shadowColor='#00e5cc';cx.shadowBlur=20;cx.fillStyle='#0a1428';cx.fillRect(bx+ox,by+oy,sw,sh);cx.restore();
-    cx.fillStyle=col;cx.fillRect(bx+ox,by+oy,sw,sh);
-    cx.fillStyle='#00e5cc';
-    for(let s=0;s<5;s++)cx.fillRect(bx+ox+4+s*8,by+oy+1,3,sh-2);
-    cx.fillStyle='rgba(0,229,204,0.15)';
-    for(let s=0;s<5;s++)cx.fillRect(bx+ox+4+s*8,by+oy,3,sh);
-    cx.fillStyle='rgba(0,229,204,0.5)';cx.fillRect(bx+ox,by+oy,sw,2);
-    cx.fillStyle='#00e5cc';cx.fillRect(bx+ox-4,by+oy+4,5,sh-8);cx.fillRect(bx+ox+sw-1,by+oy+4,5,sh-8);
-    cx.save();cx.shadowColor='#00ffee';cx.shadowBlur=12;cx.fillStyle='#00ffee';cx.fillRect(bx+ox+4,by+oy+4,9,8);cx.fillRect(bx+ox+sw-13,by+oy+4,9,8);cx.restore();
-    cx.fillStyle='#000';cx.fillRect(bx+ox+7,by+oy+6,4,4);cx.fillRect(bx+ox+sw-11,by+oy+6,4,4);
-    if(t<b.rAt){cx.fillStyle='#004433';cx.fillRect(bx+ox+4,by+oy+3,6,2);cx.fillRect(bx+ox+sw-10,by+oy+3,6,2);}
+    // THE LEVIATHAN — swimming sea serpent (side view, undulating)
+    const f5=b.vx>=0?1:-1;  // 1=facing right
+    const sCol=t<b.rAt?'#004433':'#006655';
+    const sAcc=t<b.rAt?'#00aa88':'#00e5cc';
+    const cy5=(by+b.h/2)|0;
+    cx.save();cx.shadowColor='#00e5cc';cx.shadowBlur=20;cx.fillStyle='rgba(0,0,0,0)';cx.beginPath();cx.arc(bx+b.w/2,cy5,28,0,Math.PI*2);cx.fill();cx.restore();
+    // Body: 7 segments, tail→head, undulating sine wave
+    const nSeg=7,segW=7;
+    for(let i=0;i<nSeg;i++){
+      const bodyPos=f5===1?i:nSeg-1-i;  // physical position left→right
+      const bodyPct=i/(nSeg-1);          // 0=tail, 1=near-head
+      const segH=Math.round(5+bodyPct*7);
+      const wave=(Math.sin(bossTimer*0.09+bodyPos*0.7)*5)|0;
+      const sx=(bx+bodyPos*(b.w/nSeg))|0;
+      const sy=cy5-((segH/2)|0)+wave;
+      cx.fillStyle=sCol;cx.fillRect(sx,sy,segW,segH);
+      if(i>0&&i<nSeg-1){cx.fillStyle=sAcc;cx.fillRect(sx+1,sy+2,segW-2,2);}
+    }
+    // Head (larger, on leading edge)
+    const headPos=f5===1?nSeg-1:0;
+    const headWave=(Math.sin(bossTimer*0.09+headPos*0.7)*5)|0;
+    const headX=f5===1?bx+b.w-10:bx;
+    const headY=cy5-7+headWave;
+    cx.fillStyle=sCol;cx.fillRect(headX,headY,10,14);
+    // Snout extension
+    cx.fillRect(f5===1?headX+9:headX-4,headY+8,4,6);
+    // Eye
+    const eyeX=f5===1?headX+1:headX+5;
+    cx.save();cx.shadowColor='#00ffee';cx.shadowBlur=12;cx.fillStyle='#00ffee';cx.fillRect(eyeX,headY+2,5,5);cx.restore();
+    cx.fillStyle='#001a10';cx.fillRect(eyeX+1,headY+3,3,3);cx.fillStyle='rgba(0,255,238,0.6)';cx.fillRect(eyeX+1,headY+3,1,2);
+    // Forked tongue
+    const tX=f5===1?headX+13:headX-5;
+    cx.fillStyle='#ff4466';cx.fillRect(tX,headY+12,4,1);cx.fillRect(tX+(f5===1?2:-2),headY+9,2,3);cx.fillRect(tX+(f5===1?4:-4),headY+9,2,3);
+    // Dorsal spikes (along top of body)
+    cx.fillStyle=sAcc;
+    for(let f=1;f<5;f++){
+      const fpos=f5===1?f:nSeg-1-f;
+      const fwave=(Math.sin(bossTimer*0.09+fpos*0.7)*5)|0;
+      const fx=(bx+fpos*(b.w/nSeg)+2)|0;
+      const fh=4+(f%2)*3;
+      cx.fillRect(fx,cy5-((segW/2)|0)-fh+fwave,2,fh);
+    }
+    // Tail fin (on trailing edge)
+    const tailPos=f5===1?0:nSeg-1;
+    const tailWave=(Math.sin(bossTimer*0.09+tailPos*0.7)*5)|0;
+    const tailX=f5===1?bx-3:bx+b.w+1;
+    cx.fillStyle=sAcc;cx.fillRect(tailX,cy5-5+tailWave,3,11);cx.fillRect(tailX+(f5===1?-2:3),cy5-8+tailWave,3,5);
+    if(t<b.rAt){cx.save();cx.globalAlpha=0.13;cx.fillStyle='#ff3300';cx.fillRect(bx-4,by-6,b.w+8,b.h+12);cx.restore();}
+    if(b.pullTimer>0){const pa=0.25+0.4*(b.pullTimer%20/20);cx.save();cx.globalAlpha=pa;cx.strokeStyle='#00e5cc';cx.lineWidth=1;cx.beginPath();cx.arc(bx+b.w/2,cy5,b.w*0.42+b.pullTimer*0.15,0,Math.PI*2);cx.stroke();cx.restore();}
   } else if(ti===6){
     // THE MAGMA TITAN — molten rock colossus
     const sw=b.onGround?46:38,sh=b.onGround?24:30;
@@ -2350,41 +2621,76 @@ function drawBoss(){
     if(t<b.rAt){cx.fillStyle='#0a000a';cx.fillRect(bx+ox+4,by+oy+4,6,2);cx.fillRect(bx+ox+sw-10,by+oy+4,6,2);}
     cx.restore();
   } else if(ti===8){
-    // THE ETERNAL — blazing celestial final boss
-    const sw=b.onGround?46:38,sh=b.onGround?26:32;
-    const ox=Math.round((b.w-sw)/2),oy=b.h-sh;
-    const col=t<b.rAt?'#c0a030':'#ffd700';
-    const spin=sec()*2;
-    cx.save();cx.shadowColor='#ffd700';cx.shadowBlur=26;cx.fillStyle='#060a20';cx.fillRect(bx+ox,by+oy,sw,sh);cx.restore();
-    cx.fillStyle='#161c48';cx.fillRect(bx+ox,by+oy,sw,sh);
-    cx.fillStyle=col;cx.fillRect(bx+ox,by+oy,sw,2);cx.fillRect(bx+ox,by+oy+sh-2,sw,2);cx.fillRect(bx+ox,by+oy,2,sh);cx.fillRect(bx+ox+sw-2,by+oy,2,sh);
-    cx.fillStyle='rgba(255,215,0,0.2)';for(let s=0;s<4;s++)cx.fillRect(bx+ox+4+s*11,by+oy+2,7,sh-4);
-    cx.fillStyle=col;
-    for(let s=0;s<8;s++){const a=s/8*Math.PI*2+spin;const px2=(bx+b.w/2+Math.cos(a)*(sw/2+5))|0;const py2=(by+b.h/2+Math.sin(a)*(sh/2+4))|0;cx.fillRect(px2-1,py2-1,3,3);}
-    cx.save();cx.shadowColor='#ffffc0';cx.shadowBlur=16;cx.fillStyle='#ffffc0';cx.fillRect(bx+ox+4,by+oy+5,10,9);cx.fillRect(bx+ox+sw-14,by+oy+5,10,9);cx.restore();
-    cx.fillStyle='#000';cx.fillRect(bx+ox+7,by+oy+8,4,3);cx.fillRect(bx+ox+sw-11,by+oy+8,4,3);
-    if(t<b.rAt){cx.fillStyle='#060a20';cx.fillRect(bx+ox+4,by+oy+4,6,2);cx.fillRect(bx+ox+sw-10,by+oy+4,6,2);}
-    // dive warning pulse when diveTimer is low
-    if(b.diveState==='hovering'&&b.diveTimer<60){const pct=b.diveTimer/60;if(Math.floor(sec()*8)%2){cx.save();cx.globalAlpha=0.3*(1-pct);cx.fillStyle='#ffffff';cx.fillRect(bx+ox,by+oy,sw,sh);cx.restore();}}
-    // gold stomp-window indicator
+    // THE ETERNAL — blazing sun
+    const scx=(bx+b.w/2)|0,scy=(by+b.h/2)|0;
+    const sunSpin=sec()*1.8;
+    const sunCol=t<b.rAt?'#c08000':'#ffd700';
+    const coreCol=t<b.rAt?'#ff6600':'#ffee80';
+    // Outer corona glow
+    cx.save();cx.shadowColor=sunCol;cx.shadowBlur=30;cx.fillStyle='rgba(0,0,0,0)';cx.beginPath();cx.arc(scx,scy,22,0,Math.PI*2);cx.fill();cx.restore();
+    // Spinning rays
+    cx.save();cx.translate(scx,scy);cx.rotate(sunSpin);cx.fillStyle=sunCol;
+    for(let r=0;r<8;r++){const a=r/8*Math.PI*2;cx.save();cx.rotate(a);cx.fillRect(-2,13,4,9);cx.restore();}
+    cx.restore();
+    // Counter-spin short rays
+    cx.save();cx.translate(scx,scy);cx.rotate(-sunSpin*0.5);cx.fillStyle=coreCol;
+    for(let r=0;r<8;r++){const a=r/8*Math.PI*2+Math.PI/8;cx.save();cx.rotate(a);cx.fillRect(-1,14,3,5);cx.restore();}
+    cx.restore();
+    // Prominences (pulsing blobs around rim)
+    cx.save();cx.translate(scx,scy);cx.rotate(sunSpin*0.4);
+    for(let p=0;p<6;p++){const a=p/6*Math.PI*2;const pr=12;cx.fillStyle=t<b.rAt?'#ff6600':'#ffaa20';cx.fillRect((Math.cos(a)*pr)|0-2,(Math.sin(a)*pr)|0-2,4,4);}
+    cx.restore();
+    // Main solar disk
+    cx.save();cx.shadowColor='#ffe060';cx.shadowBlur=14;cx.fillStyle='#ff9000';cx.beginPath();cx.arc(scx,scy,11,0,Math.PI*2);cx.fill();cx.restore();
+    cx.fillStyle=sunCol;cx.beginPath();cx.arc(scx,scy,9,0,Math.PI*2);cx.fill();
+    cx.fillStyle='rgba(255,255,200,0.25)';cx.beginPath();cx.arc(scx,scy,7,0,Math.PI*2);cx.fill();
+    // Eyes
+    cx.save();cx.shadowColor='#ffffff';cx.shadowBlur=12;cx.fillStyle='#fff8c0';cx.fillRect(scx-7,scy-2,5,5);cx.fillRect(scx+2,scy-2,5,5);cx.restore();
+    cx.fillStyle=t<b.rAt?'#cc4400':'#883300';cx.fillRect(scx-6,scy-1,3,3);cx.fillRect(scx+3,scy-1,3,3);
+    if(t<b.rAt){cx.save();cx.shadowColor='#ff4400';cx.shadowBlur=16;cx.strokeStyle='#ff6600';cx.lineWidth=1.5;cx.translate(scx,scy);cx.rotate(sunSpin*0.8);for(let f=0;f<4;f++){const fa=f/4*Math.PI*2;cx.beginPath();cx.moveTo(Math.cos(fa)*8,Math.sin(fa)*8);cx.lineTo(Math.cos(fa+0.3)*13,Math.sin(fa+0.3)*13);cx.stroke();}cx.restore();}
+    if(b.diveState==='hovering'&&b.diveTimer<60){const pct=b.diveTimer/60;if(Math.floor(sec()*8)%2){cx.save();cx.globalAlpha=0.35*(1-pct);cx.shadowColor='#ffd700';cx.shadowBlur=20;cx.strokeStyle='#ffd700';cx.lineWidth=2;cx.beginPath();cx.arc(scx,scy,14,0,Math.PI*2);cx.stroke();cx.restore();}}
     if(b.diveState==='stomping'){cx.save();cx.shadowColor='#ffd700';cx.shadowBlur=20;cx.strokeStyle='#ffd700';cx.lineWidth=2;cx.strokeRect(bx-2,by-2,b.w+4,b.h+4);cx.restore();}
   } else {
-    // THE KRAKEN — massive bioluminescent squid
-    const sw=b.onGround?50:42,sh=b.onGround?28:34;
-    const ox=Math.round((b.w-sw)/2),oy=b.h-sh;
-    const pulse=0.5+0.5*Math.sin(sec()*4);
-    const kcol=t<b.rAt?'#003344':'#005566';
-    cx.save();cx.shadowColor='#00e5ff';cx.shadowBlur=18+pulse*8;cx.fillStyle='#001122';cx.fillRect(bx+ox,by+oy,sw,sh);cx.restore();
-    cx.fillStyle=kcol;cx.fillRect(bx+ox,by+oy,sw,sh);
-    cx.fillStyle=`rgba(0,229,255,0.22)`;for(let s=0;s<5;s++)cx.fillRect(bx+ox+3+s*9,by+oy+1,5,sh-2);
-    cx.fillStyle='#00e5ff';cx.fillRect(bx+ox,by+oy,sw,2);
-    const tt2=Math.floor(sec()*5);
-    cx.fillStyle='#004455';
-    for(let s=0;s<6;s++){const tx=bx+ox+3+s*8;const rl=s%2===0?-1:1;cx.fillRect(tx+(tt2%2)*rl,by+oy+sh,3,6+s%3*2);}
-    cx.save();cx.shadowColor='#00ffee';cx.shadowBlur=10;cx.fillStyle='#00ffee';cx.fillRect(bx+ox+5,by+oy+6,10,9);cx.fillRect(bx+ox+sw-15,by+oy+6,10,9);cx.restore();
-    cx.fillStyle='#000';cx.fillRect(bx+ox+8,by+oy+9,4,4);cx.fillRect(bx+ox+sw-12,by+oy+9,4,4);
-    cx.fillStyle='rgba(0,229,255,0.5)';cx.fillRect(bx+ox+9,by+oy+10,2,2);cx.fillRect(bx+ox+sw-11,by+oy+10,2,2);
-    if(t<b.rAt){cx.fillStyle='#001122';cx.fillRect(bx+ox+5,by+oy+5,6,2);cx.fillRect(bx+ox+sw-11,by+oy+5,6,2);}
+    // THE KRAKEN — giant deep-sea squid
+    const kcx=(bx+b.w/2)|0,kcy=(by+b.h/2-4)|0;
+    const kpulse=0.5+0.5*Math.sin(sec()*3);
+    const kcol=t<b.rAt?'#002233':'#003a55';
+    const kglow=t<b.rAt?'#00aacc':'#00e5ff';
+    cx.save();cx.shadowColor=kglow;cx.shadowBlur=20+kpulse*10;cx.fillStyle='rgba(0,0,0,0)';cx.beginPath();cx.arc(kcx,kcy,22,0,Math.PI*2);cx.fill();cx.restore();
+    // Mantle (dome) — stacked rects for teardrop shape
+    cx.fillStyle=kcol;
+    cx.fillRect(kcx-6,kcy-16,12,4);    // top point
+    cx.fillRect(kcx-10,kcy-13,20,5);   // upper dome
+    cx.fillRect(kcx-14,kcy-9,28,7);    // wide mid
+    cx.fillRect(kcx-12,kcy-3,24,8);    // lower mantle
+    // Side fins
+    cx.fillStyle=kcol;
+    cx.fillRect(kcx-18,kcy-10,5,10);cx.fillRect(kcx+13,kcy-10,5,10);
+    cx.fillStyle='rgba(0,229,255,0.2)';cx.fillRect(kcx-17,kcy-9,4,6);cx.fillRect(kcx+13,kcy-9,4,6);
+    // Bioluminescent stripes on mantle
+    cx.fillStyle=`rgba(0,229,255,0.30)`;
+    cx.fillRect(kcx-8,kcy-12,4,18);cx.fillRect(kcx+4,kcy-12,4,18);cx.fillRect(kcx-2,kcy-14,4,20);
+    // Top mantle highlight
+    cx.fillStyle='rgba(0,200,255,0.22)';cx.fillRect(kcx-10,kcy-13,20,3);
+    // Tentacles (6, animated with individual sine waves)
+    for(let i=0;i<6;i++){
+      const tx=kcx-13+i*5;
+      const wv=(Math.sin(sec()*2.5+i*1.1)*4)|0;
+      const tlen=14+i%3*3;
+      cx.fillStyle=t<b.rAt?'#002233':'#003a55';
+      cx.fillRect(tx,kcy+4,3,tlen+wv);
+      cx.fillStyle=`rgba(0,229,255,0.35)`;cx.fillRect(tx,kcy+4+tlen+wv-3,3,3);
+    }
+    // Eyes — large plate eyes
+    cx.save();cx.shadowColor='#00ffee';cx.shadowBlur=14;cx.fillStyle='#001a28';cx.fillRect(kcx-11,kcy-7,9,9);cx.fillRect(kcx+2,kcy-7,9,9);cx.restore();
+    cx.save();cx.shadowColor='#00ffee';cx.shadowBlur=10;cx.fillStyle=kglow;cx.fillRect(kcx-10,kcy-6,7,7);cx.fillRect(kcx+3,kcy-6,7,7);cx.restore();
+    cx.fillStyle='#000';cx.fillRect(kcx-8,kcy-4,4,4);cx.fillRect(kcx+4,kcy-4,4,4);
+    cx.fillStyle='rgba(0,255,238,0.7)';cx.fillRect(kcx-7,kcy-4,2,2);cx.fillRect(kcx+5,kcy-4,2,2);
+    if(t<b.rAt){cx.fillStyle='rgba(255,40,0,0.15)';cx.fillRect(kcx-14,kcy-16,28,24);}
+    if(b.telegraphTargets&&b.telegraphTargets.length&&b.telegraphTimer>0){
+      const fy=currentRoom.plats.reduce((best,pl)=>pl[1]<225&&pl[1]>best?pl[1]:best,0)||224;
+      if(Math.floor(sec()*8)%2){cx.save();cx.globalAlpha=0.7;cx.fillStyle='#00e5ff';for(const tx of b.telegraphTargets)cx.fillRect(tx-5,fy-40,10,6);cx.restore();}
+    }
   }
   if(b.iframes>0&&Math.floor(sec()*12)%2){cx.fillStyle='rgba(255,255,255,0.45)';cx.fillRect(bx,by,b.w,b.h);}
 }
@@ -2673,7 +2979,7 @@ function update(ts){
 
   if(STATE==='RUN'){
     updateMovers();
-    if(lavaY!==null)lavaY=Math.max(lavaY-0.16*dt,80);
+    if(lavaY!==null&&!bossEntity)lavaY=Math.max(lavaY-0.16*dt,80);
     updateIcicles();
     updatePlayer();
     updateCamera();
