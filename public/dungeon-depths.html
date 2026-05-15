@@ -196,15 +196,15 @@ function pickUpgrades(){
 // Coords in pixels, room is W=320 H=240, camera doesn't scroll (single-screen rooms for now)
 const ROOM_POOLS={
   grasslands:[
-    {type:'combat',
-     plats:[[0,224,320,16],[40,180,60,8],[140,150,80,8],[240,170,60,8],[80,120,50,8],[180,100,60,8]],
-     enemyCount:3,spawn:[20,200],exit:[290,208]},
-    {type:'combat',
-     plats:[[0,224,320,16],[60,190,50,8],[150,160,70,8],[240,180,50,8],[100,130,80,8]],
-     enemyCount:2,spawn:[20,200],exit:[290,208]},
-    {type:'treasure',
-     plats:[[0,224,320,16],[80,170,60,8],[180,140,60,8],[130,100,60,8]],
-     enemyCount:0,spawn:[20,200],exit:[290,208]},
+    {type:'combat',w:640,
+     plats:[[0,224,640,16],[60,190,65,8],[190,165,75,8],[130,128,60,8],[310,178,65,8],[280,140,70,8],[440,165,75,8],[550,190,65,8],[490,128,65,8]],
+     enemyCount:3,spawn:[20,200],exit:[615,208]},
+    {type:'combat',w:640,
+     plats:[[0,224,640,16],[80,193,55,8],[200,172,70,8],[360,185,60,8],[250,145,65,8],[440,172,70,8],[560,193,55,8],[480,140,65,8]],
+     enemyCount:3,spawn:[20,200],exit:[615,208]},
+    {type:'treasure',w:480,
+     plats:[[0,224,480,16],[80,185,65,8],[220,160,75,8],[370,183,65,8],[155,125,60,8],[290,135,60,8]],
+     enemyCount:0,spawn:[20,200],exit:[455,208]},
   ],
   clockwork:[
     {type:'combat',
@@ -238,6 +238,23 @@ const ROOM_POOLS={
      plats:[[0,224,320,16],[68,176,68,8],[178,146,68,8],[118,106,80,8]],
      enemyCount:0,spawn:[20,200],exit:[290,208]},
   ],
+};
+const BOSS_ROOMS={
+  grasslands:{type:'boss',w:640,
+    plats:[[0,224,640,16],[70,185,55,8],[210,165,65,8],[320,145,60,8],[430,165,65,8],[580,185,55,8]],
+    enemyCount:0,spawn:[20,200],exit:[615,208]},
+  clockwork:{type:'boss',w:640,
+    plats:[[0,224,640,16],[60,190,55,8],[180,165,70,8],[310,145,70,8],[430,165,70,8],[570,190,55,8]],
+    enemyCount:5,spawn:[20,200],exit:[615,208]},
+  frozen:{type:'boss',w:640,
+    plats:[[0,224,640,16],[50,192,60,8],[190,168,80,8],[340,150,80,8],[480,168,80,8],[570,192,60,8]],
+    enemyCount:5,spawn:[20,200],exit:[615,208]},
+  storm:{type:'boss',w:640,
+    plats:[[0,224,640,16],[60,195,50,8],[160,170,65,8],[290,148,65,8],[390,148,65,8],[520,170,65,8],[590,195,50,8]],
+    enemyCount:6,spawn:[20,200],exit:[615,208]},
+  crystal:{type:'boss',w:640,
+    plats:[[0,224,640,16],[80,190,55,8],[200,162,70,8],[330,138,70,8],[450,162,70,8],[570,190,55,8]],
+    enemyCount:6,spawn:[20,200],exit:[615,208]},
 };
 const THEME_KEYS=['grasslands','clockwork','frozen','storm','crystal'];
 
@@ -278,6 +295,11 @@ function resetPlayer(sx,sy){
   p.atkTimer=0;p.atkCd=0;
 }
 
+function updateCamera(){
+  const roomW=currentRoom?currentRoom.w||W:W;
+  cameraX=clamp(p.x+PW/2-W/2,0,roomW-W);
+}
+
 // ── Enemy instances ────────────────────────────────────────────────────────────
 let enemies=[];
 function spawnEnemies(roomDef,themeIdx){
@@ -303,6 +325,8 @@ function spawnEnemies(roomDef,themeIdx){
 // ── Drops ─────────────────────────────────────────────────────────────────────
 let drops=[];
 let projectiles=[];
+let cameraX=0;
+let bossEntity=null;
 function spawnDrops(x,y,n){
   for(let i=0;i<n;i++){
     drops.push({x,y,vx:rng(-1.5,1.5),vy:rng(-3,-1),collected:false,type:'coin'});
@@ -347,7 +371,7 @@ function loadRoom(roomDef){
   currentRoom=roomDef;
   exitOpen=false;
   exitX=roomDef.exit[0];exitY=roomDef.exit[1];
-  drops=[];particles=[];projectiles=[];
+  drops=[];particles=[];projectiles=[];bossEntity=null;cameraX=0;
   resetPlayer(roomDef.spawn[0],roomDef.spawn[1]);
   spawnEnemies(roomDef,run.themeIdx);
   roomEnemiesCleared=(roomDef.enemyCount===0);
@@ -373,18 +397,15 @@ function nextRoom(){
   run.depth++;
   run.roomIdx++;
   const themeKey=THEME_KEYS[run.themeIdx];
-  const pool=ROOM_POOLS[themeKey];
+  if(run.roomIdx===3){
+    buildShop();fadeTo(()=>{STATE='SHOP_SCREEN';});return;
+  }
   if(run.roomIdx===4){
-    buildShop();
-    fadeTo(()=>{STATE='SHOP_SCREEN';});
-    return;
+    const br=BOSS_ROOMS[themeKey];
+    fadeTo(()=>{loadRoom(br);spawnBoss(run.themeIdx);STATE='RUN';});return;
   }
-  if(run.roomIdx===5){
-    advanceTheme();
-    return;
-  }
-  const available=pool.filter(r=>r.type!=='boss');
-  const def=pick(available);
+  if(run.roomIdx>=5){advanceTheme();return;}
+  const def=pick(ROOM_POOLS[themeKey].filter(r=>r.type!=='boss'));
   fadeTo(()=>{loadRoom(def);STATE='RUN';});
 }
 
@@ -419,10 +440,78 @@ function physStep(obj,plats){
       }
     }
   }
-  obj.x=clamp(obj.x,0,W-(obj.w||PW));
+  obj.x=clamp(obj.x,0,(currentRoom?currentRoom.w||W:W)-(obj.w||PW));
 }
 
 // ── Update helpers ────────────────────────────────────────────────────────────
+function spawnBoss(themeIdx){
+  bossEntity=null;
+  if(themeIdx!==0)return; // only grasslands has a special boss for now
+  bossEntity={
+    x:306,y:200,vx:1.3,vy:0,
+    w:28,h:20,hp:8,maxHp:8,
+    onGround:false,jumpTimer:150,
+    spawnedMinions:false,iframes:0,
+  };
+}
+
+function updateBoss(){
+  if(!bossEntity)return;
+  const b=bossEntity;
+  if(b.iframes>0)b.iframes--;
+  const roomW=currentRoom.w||W;
+  const rage=b.hp<=b.maxHp/2;
+  const spd=rage?2.2:1.3;
+
+  // patrol and bounce off room edges
+  if(b.onGround)b.vx=Math.sign(b.vx||1)*spd;
+  if(b.x<=0)b.vx=Math.abs(b.vx);
+  if(b.x+b.w>=roomW)b.vx=-Math.abs(b.vx);
+
+  // periodic jumps toward player
+  b.jumpTimer--;
+  if(b.jumpTimer<=0&&b.onGround){
+    b.vy=-7;
+    b.vx=(p.x>b.x?1:-1)*spd;
+    b.jumpTimer=rage?80+Math.floor(rng(0,80)):120+Math.floor(rng(0,120));
+  }
+
+  physStep(b,currentRoom.plats);
+
+  // spawn minions at half HP
+  if(rage&&!b.spawnedMinions){
+    b.spawnedMinions=true;
+    for(const ox of [-24,b.w+8]){
+      enemies.push({x:b.x+ox,y:b.y,vx:ox<0?-0.6:0.6,vy:0,
+        w:10,h:14,hp:2,type:'slime',
+        platX:0,platRight:roomW,
+        onGround:false,stunTimer:0,dropCoins:1});
+    }
+    burst(b.x+b.w/2,b.y,'#4f4',16);
+  }
+
+  // stomp hit
+  if(p.stomping&&p.vy>0&&b.iframes===0&&ov(p.x,p.y,PW,PH,b.x,b.y,b.w,b.h)){
+    b.hp--;b.iframes=35;
+    p.vy=-6.5;p.iframes=20;
+    burst(b.x+b.w/2,b.y,'#4f4',10);
+    if(b.hp<=0){
+      spawnDrops(b.x+b.w/2,b.y,6);
+      spawnShard(b.x+b.w/2,b.y);spawnShard(b.x+b.w/2,b.y);
+      burst(b.x+b.w/2,b.y,'#ffd700',24);
+      bossEntity=null;exitOpen=true;roomEnemiesCleared=true;
+    }
+    return;
+  }
+
+  // contact damage
+  if(ov(p.x,p.y,PW,PH,b.x,b.y,b.w,b.h)&&p.iframes===0){
+    if(p.shieldUp){p.shieldUp=false;}
+    else{run.hp--;p.iframes=60;burst(p.x+PW/2,p.y+PH/2,'#f44',10);}
+    if(run.hp<=0){fadeTo(()=>{STATE='GAME_OVER';});}
+  }
+}
+
 const DASH_SPEED=11,DASH_DUR=12;
 const BASE_ATK_CD=20,CROSSBOW_ATK_CD=35,TOME_ATK_CD=30;
 
@@ -754,6 +843,53 @@ function drawPlayer(){
   }
 }
 
+function drawBoss(){
+  if(!bossEntity)return;
+  const b=bossEntity;
+  const bx=Math.round(b.x);
+  const by=Math.round(b.y);
+  const t=b.hp/b.maxHp;
+  // squish: flatter on ground, taller in air
+  const sw=b.onGround?34:26,sh=b.onGround?16:24;
+  const ox=Math.round((b.w-sw)/2),oy=b.h-sh;
+  const r=Math.round(lerp(60,120,t)),g=Math.round(lerp(200,220,t));
+  const col=`rgb(${r},${g},60)`;
+  // glow body
+  cx.save();cx.shadowColor=col;cx.shadowBlur=14;
+  cx.fillStyle=col;cx.fillRect(bx+ox,by+oy,sw,sh);cx.restore();
+  // solid body
+  cx.fillStyle=col;cx.fillRect(bx+ox,by+oy,sw,sh);
+  // highlight top strip
+  cx.fillStyle='rgba(255,255,255,0.2)';cx.fillRect(bx+ox,by+oy,sw,3);
+  // eyes
+  cx.fillStyle='#fff';cx.fillRect(bx+ox+4,by+oy+4,7,7);cx.fillRect(bx+ox+sw-11,by+oy+4,7,7);
+  cx.fillStyle='#111';cx.fillRect(bx+ox+6,by+oy+6,4,4);cx.fillRect(bx+ox+sw-9,by+oy+6,4,4);
+  // angry brow lines at low HP
+  if(t<0.5){
+    cx.fillStyle='#111';
+    cx.fillRect(bx+ox+4,by+oy+3,5,2);cx.fillRect(bx+ox+sw-9,by+oy+3,5,2);
+  }
+  // iframe flash
+  if(b.iframes>0&&Math.floor(sec()*12)%2){
+    cx.fillStyle='rgba(255,255,255,0.45)';cx.fillRect(bx+ox,by+oy,sw,sh);
+  }
+}
+
+function drawBossHUD(){
+  if(!bossEntity)return;
+  const b=bossEntity;
+  const t=b.hp/b.maxHp;
+  const barW=W-40;
+  const r=Math.round(lerp(60,120,t)),g=Math.round(lerp(200,220,t));
+  const col=`rgb(${r},${g},60)`;
+  cx.fillStyle='#050508';cx.fillRect(20,10,barW,10);
+  cx.fillStyle=col;cx.fillRect(20,10,Math.round(barW*t),10);
+  cx.save();cx.shadowColor=col;cx.shadowBlur=8;
+  cx.strokeStyle=col;cx.lineWidth=1;cx.strokeRect(20,10,barW,10);
+  cx.restore();
+  txtC('THE GREAT SLIME',24,col);
+}
+
 function drawEnemies(theme){
   for(const e of enemies){
     const ex=Math.round(e.x),ey=Math.round(e.y);
@@ -821,11 +957,13 @@ function drawHUD(){
   txt(String(run.shards),12,25,'#e040fb');
   // depth
   txt('DEPTH:'+run.depth,W-60,4,'#aaa');
-  // theme name (centered, subtle glow)
-  const tn=THEMES[run.themeIdx].name;
-  const tc=THEMES[run.themeIdx].accent;
-  cx.save();cx.shadowColor=tc;cx.shadowBlur=8;
-  txt(tn,Math.round((W-txtW(tn))/2),4,tc);cx.restore();
+  // theme name (hidden during boss — boss HUD takes that space)
+  if(!bossEntity){
+    const tn=THEMES[run.themeIdx].name;
+    const tc=THEMES[run.themeIdx].accent;
+    cx.save();cx.shadowColor=tc;cx.shadowBlur=8;
+    txt(tn,Math.round((W-txtW(tn))/2),4,tc);cx.restore();
+  }
   // weapon indicator (bottom right)
   if(run.weapon){
     const wc={dagger:'#4fc3f7',crossbow:'#ffd700',tome:'#e040fb'}[run.weapon];
@@ -854,14 +992,13 @@ function drawParticles(){
 function checkExit(){
   if(!exitOpen)return;
   if(ov(p.x,p.y,PW,PH,exitX,exitY-12,14,14)){
-    if(currentRoom.type==='treasure'||currentRoom.type==='combat'){
-      // treasure rooms give upgrade pick
-      if(currentRoom.type==='treasure'){
-        upgradeChoices=pickUpgrades();upgradeSelected=0;
-        fadeTo(()=>{STATE='UPGRADE_PICK';});
-      } else {
-        nextRoom();
-      }
+    if(currentRoom.type==='boss'){
+      advanceTheme();
+    } else if(currentRoom.type==='treasure'){
+      upgradeChoices=pickUpgrades(run.upgrades,run.weapon);upgradeSelected=0;
+      fadeTo(()=>{STATE='UPGRADE_PICK';});
+    } else {
+      nextRoom();
     }
   }
 }
@@ -882,7 +1019,9 @@ function update(ts){
 
   if(STATE==='RUN'){
     updatePlayer();
+    updateCamera();
     updateEnemies();
+    updateBoss();
     updateProjectiles();
     updateDrops();
     updateParticles();
@@ -901,14 +1040,18 @@ function drawFrame(){
     drawMenu();
   } else if(STATE==='RUN'){
     drawBg(theme);
+    cx.save();cx.translate(-Math.round(cameraX),0);
     drawPlats(currentRoom.plats,theme);
     drawDrops();
     drawProjectiles();
     drawExit();
     drawEnemies(theme);
+    drawBoss();
     drawPlayer();
     drawParticles();
+    cx.restore();
     drawHUD();
+    drawBossHUD();
   } else if(STATE==='WEAPON_PICK'){
     drawWeaponPick();
   } else if(STATE==='UPGRADE_PICK'){
@@ -1056,10 +1199,10 @@ window.addEventListener('keydown',e=>{
         run.coins-=it.cost;
         if(it.id==='heal')run.hp=Math.min(run.hp+2,run.maxHp);
         if(it.id==='maxhp'){run.maxHp++;run.hp++;}
-        if(it.id==='upgrade'){upgradeChoices=pickUpgrades();upgradeSelected=0;STATE='UPGRADE_PICK';}
+        if(it.id==='upgrade'){upgradeChoices=pickUpgrades(run.upgrades,run.weapon);upgradeSelected=0;STATE='UPGRADE_PICK';}
       }
     }
-    if(e.code==='Escape'){advanceTheme();}
+    if(e.code==='Escape'){nextRoom();}
   } else if(STATE==='GAME_OVER'||STATE==='WIN'){
     if(e.code==='Space'){
       if(run.depth>meta.deepest){meta.deepest=run.depth;saveMeta();}
