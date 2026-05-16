@@ -348,7 +348,7 @@ function startTestRun(worldIdx,goBoss){
 
 // ── Weapons ───────────────────────────────────────────────────────────────────
 const WEAPONS=[
-  {id:'dagger',   name:'DAGGER',    desc:'Fast melee slash',      col:'#4fc3f7'},
+  {id:'dagger',   name:'DAGGER',    desc:'Throws fast daggers',    col:'#4fc3f7'},
   {id:'crossbow', name:'CROSSBOW',  desc:'Fires a piercing bolt',  col:'#ffd700'},
   {id:'tome',     name:'TOME',      desc:'Magic area burst',       col:'#e040fb'},
   {id:'lance',    name:'LANCE',     desc:'Long piercing thrust',   col:'#ff8844'},
@@ -408,7 +408,7 @@ const UPGRADE_POOL={
     {id:'dash_strike',cat:'combat',   name:'BLADE RUSH',   desc:'Dashing damages enemies'},
     {id:'stomp_dmg',  cat:'combat',   name:'HEAVY STOMP',  desc:'Stomp deals 2 damage'},
     {id:'area_stomp', cat:'combat',   name:'SHOCKWAVE',    desc:'Stomp stuns nearby foes'},
-    {id:'spin_blade', cat:'combat',   name:'SPIN BLADE',   desc:'Slash hits 360 around you'},
+    {id:'spin_blade', cat:'combat',   name:'SPREAD THROW', desc:'Throw daggers in all 4 directions'},
     {id:'poison',     cat:'combat',   name:'VENOM EDGE',   desc:'Hits apply 2-tick poison'},
     {id:'crit',       cat:'combat',   name:'CRIT EDGE',    desc:'25pct chance for 3x damage'},
   ],
@@ -495,10 +495,10 @@ function pickUpgrades(){
 // Coords in pixels, room is W=320 H=240, camera doesn't scroll (single-screen rooms for now)
 const ROOM_POOLS={
   grasslands:[
-    {type:'combat',w:640,plats:[[0,224,640,16],[80,200,90,8],[200,176,90,8],[320,152,90,8],[440,128,90,8],[540,104,100,8]],enemyCount:2,spawn:[20,200],exit:[610,100]},
-    {type:'combat',w:640,plats:[[0,224,640,16],[60,184,60,8],[180,184,60,8],[300,164,80,8],[440,184,60,8],[560,184,60,8]],enemyCount:3,spawn:[20,200],exit:[610,220]},
-    {type:'combat',w:640,plats:[[0,200,80,40],[80,212,80,28],[160,200,60,40],[220,224,140,16],[360,200,60,40],[420,212,80,28],[500,200,60,40],[560,184,80,56],[140,160,40,8],[340,168,40,8],[500,160,40,8]],enemyCount:3,spawn:[20,176],exit:[610,180]},
-    {type:'treasure',w:640,plats:[[0,224,300,16],[340,224,300,16],[280,196,40,8],[320,196,40,8],[310,160,40,8],[120,184,60,8],[460,184,60,8]],enemyCount:2,spawn:[20,200],exit:[610,220]},
+    {type:'combat',w:640,plats:[[0,224,640,16],[80,200,90,8],[200,176,90,8],[320,152,90,8],[440,128,90,8],[540,104,100,8]],decor:[['fill',80,208,90,16],['fill',200,184,90,40],['fill',320,160,90,64],['fill',440,136,90,88],['fill',540,112,100,112],['water',8,222,56,2]],enemyCount:2,spawn:[20,200],exit:[610,88]},
+    {type:'combat',w:640,plats:[[0,224,640,16],[60,184,60,8],[180,184,60,8],[300,164,80,8],[440,184,60,8],[560,184,60,8]],decor:[['water',240,222,120,5],['water',430,222,40,5]],enemyCount:3,spawn:[20,200],exit:[610,220]},
+    {type:'combat',w:640,plats:[[0,200,80,40],[80,212,80,28],[160,200,60,40],[220,224,140,16],[360,200,60,40],[420,212,80,28],[500,200,60,40],[560,184,80,56],[140,160,40,8],[340,168,40,8],[500,160,40,8]],decor:[['water',230,222,120,5]],enemyCount:3,spawn:[20,176],exit:[610,168]},
+    {type:'treasure',w:640,plats:[[0,224,130,16],[170,224,130,16],[340,224,130,16],[510,224,130,16],[280,196,40,8],[320,196,40,8],[310,160,40,8],[120,184,60,8],[460,184,60,8]],decor:[['pond',130,232,40,8],['pond',300,232,40,8],['pond',470,232,40,8]],enemyCount:2,spawn:[20,200],exit:[610,208]},
   ],
   clockwork:[
     // Gear Tower: 5 moving platforms oscillate at staggered heights; ride them up to top exit
@@ -547,69 +547,52 @@ const ROOM_POOLS={
      enemyCount:2,spawn:[20,200],exit:[610,220]},
   ],
   frozen:[
-    {type:'combat',w:640,plats:[[0,80,200,8],[240,120,200,8],[40,160,200,8],[280,200,360,40]],drops:[[80,0],[160,0],[300,0],[420,0],[520,0]],enemyCount:3,spawn:[20,56],exit:[610,196]},
-    {type:'combat',w:640,plats:[[0,200,80,40],[140,180,60,8],[260,180,60,8],[380,170,60,8],[500,180,60,8],[560,200,80,40],[180,120,60,8],[380,110,60,8]],drops:[[60,0],[200,0],[320,0],[440,0],[560,0]],enemyCount:3,spawn:[20,176],exit:[610,196]},
-    {type:'combat',w:640,plats:[[380,224,260,16],[250,184,200,8],[80,148,200,8],[180,112,200,8],[0,76,200,8]],drops:[[120,0],[240,0],[380,0],[500,0],[600,0]],enemyCount:2,spawn:[610,200],exit:[10,72]},
-    {type:'treasure',w:640,plats:[[0,224,640,16],[80,180,40,8],[520,180,40,8],[120,180,400,8],[280,140,80,8]],enemyCount:2,spawn:[20,200],exit:[610,220]},
+    {type:'combat',w:640,plats:[[0,80,200,8],[240,120,200,8],[40,160,200,8],[280,200,360,40]],drops:[[80,0],[160,0],[300,0],[420,0],[520,0]],decor:[['fill',0,88,40,136],['fill',200,0,40,80],['water',280,198,360,2]],enemyCount:3,spawn:[20,56],exit:[610,196]},
+    {type:'combat',w:640,plats:[[0,200,80,40],[140,180,60,8],[260,180,60,8],[380,170,60,8],[500,180,60,8],[560,200,80,40],[180,120,60,8],[380,110,60,8]],drops:[[60,0],[200,0],[320,0],[440,0],[560,0]],decor:[['water',0,198,80,2],['water',560,198,80,2]],enemyCount:3,spawn:[20,176],exit:[610,196]},
+    {type:'combat',w:640,plats:[[380,224,260,16],[250,184,200,8],[80,148,200,8],[180,112,200,8],[0,76,200,8]],drops:[[120,0],[240,0],[380,0],[500,0],[600,0]],decor:[['fill',0,84,80,140],['water',380,222,260,2]],enemyCount:2,spawn:[610,200],exit:[10,72]},
+    {type:'treasure',w:640,plats:[[0,224,640,16],[80,180,40,8],[520,180,40,8],[120,180,400,8],[280,140,80,8]],decor:[['water',20,222,60,2],['water',200,222,240,2],['water',560,222,60,2]],enemyCount:2,spawn:[20,200],exit:[610,220]},
   ],
   storm:[
-    {type:'combat',w:640,plats:[[0,224,640,16],[290,196,60,8],[240,168,60,8],[340,168,60,8],[260,140,60,8],[320,140,60,8],[270,112,100,8],[290,80,80,8],[280,48,80,8]],enemyCount:3,spawn:[320,176],exit:[318,44]},
-    {type:'combat',w:640,plats:[[0,224,640,16],[40,200,40,8],[40,170,40,8],[40,140,40,8],[40,110,40,8],[40,80,40,8],[560,200,40,8],[560,170,40,8],[560,140,40,8],[560,110,40,8],[560,80,40,8],[80,56,520,8]],enemyCount:4,spawn:[20,200],exit:[318,52]},
-    {type:'combat',w:640,plats:[[0,224,640,16],[60,196,60,8],[180,168,60,8],[300,140,60,8],[420,112,60,8],[540,84,60,8],[420,56,60,8],[300,32,340,8]],enemyCount:3,spawn:[20,200],exit:[610,28]},
-    {type:'treasure',w:640,plats:[[0,224,640,16],[80,180,80,8],[480,180,80,8],[240,140,160,8],[280,80,80,8]],enemyCount:2,spawn:[318,56],exit:[610,220]},
+    {type:'combat',w:640,plats:[[0,224,640,16],[290,196,60,8],[240,168,60,8],[340,168,60,8],[260,140,60,8],[320,140,60,8],[270,112,100,8],[290,80,80,8],[280,48,80,8]],decor:[['fill',0,0,60,224],['fill',580,0,60,224],['water',20,222,80,2],['water',540,222,80,2]],enemyCount:3,spawn:[320,176],exit:[318,44]},
+    {type:'combat',w:640,plats:[[0,224,640,16],[40,200,40,8],[40,170,40,8],[40,140,40,8],[40,110,40,8],[40,80,40,8],[560,200,40,8],[560,170,40,8],[560,140,40,8],[560,110,40,8],[560,80,40,8],[80,56,520,8]],decor:[['fill',0,0,40,200],['fill',600,0,40,200],['water',80,222,480,2]],enemyCount:4,spawn:[20,200],exit:[318,52]},
+    {type:'combat',w:640,plats:[[0,224,640,16],[60,196,60,8],[180,168,60,8],[300,140,60,8],[420,112,60,8],[540,84,60,8],[420,56,60,8],[300,32,340,8]],decor:[['fill',0,0,60,224],['water',0,222,60,2],['water',180,222,100,2],['water',480,222,160,2]],enemyCount:3,spawn:[20,200],exit:[610,28]},
+    {type:'treasure',w:640,plats:[[0,224,640,16],[80,180,80,8],[480,180,80,8],[240,140,160,8],[280,80,80,8]],decor:[['water',0,222,80,2],['water',280,222,80,2],['water',560,222,80,2]],enemyCount:2,spawn:[318,56],exit:[610,220]},
   ],
   crystal:[
-    {type:'combat',w:640,plats:[[0,224,640,16],[60,196,40,8],[140,176,40,8],[220,200,40,8],[280,164,50,8],[380,184,40,8],[440,156,50,8],[520,176,40,8],[580,148,60,8],[160,120,40,8],[320,108,40,8],[480,108,40,8],[580,80,60,8]],enemyCount:3,spawn:[20,200],exit:[610,76]},
-    {type:'combat',w:640,plats:[[0,224,640,16],[80,196,60,8],[40,164,40,8],[120,144,30,8],[60,112,40,8],[140,80,30,8],[420,196,60,8],[500,168,60,8],[420,136,60,8],[500,104,60,8],[560,72,80,8]],enemyCount:3,spawn:[20,200],exit:[610,68]},
-    {type:'combat',w:640,plats:[[0,224,640,16],[60,200,30,8],[180,210,30,8],[300,200,40,8],[420,210,30,8],[540,200,30,8],[40,170,40,8],[120,180,30,8],[220,160,40,8],[340,170,30,8],[440,160,40,8],[540,170,40,8],[80,130,50,8],[200,120,40,8],[300,130,40,8],[400,120,40,8],[500,130,50,8],[60,90,40,8],[180,80,60,8],[300,90,40,8],[420,80,40,8],[540,90,40,8],[0,50,80,8]],enemyCount:4,spawn:[610,200],exit:[10,46]},
-    {type:'treasure',w:640,plats:[[0,224,640,16],[80,190,80,8],[480,190,80,8],[240,160,160,8],[280,128,80,8]],enemyCount:2,spawn:[20,200],exit:[610,220]},
+    {type:'combat',w:640,plats:[[0,224,640,16],[60,196,40,8],[140,176,40,8],[220,200,40,8],[280,164,50,8],[380,184,40,8],[440,156,50,8],[520,176,40,8],[580,148,60,8],[160,120,40,8],[320,108,40,8],[480,108,40,8],[580,80,60,8]],decor:[['fill',0,0,60,224],['fill',580,0,60,148]],enemyCount:3,spawn:[20,200],exit:[610,76]},
+    {type:'combat',w:640,plats:[[0,224,640,16],[80,196,60,8],[40,164,40,8],[120,144,30,8],[60,112,40,8],[140,80,30,8],[420,196,60,8],[500,168,60,8],[420,136,60,8],[500,104,60,8],[560,72,80,8]],decor:[['fill',0,0,40,224],['fill',200,0,80,60],['fill',600,0,40,72]],enemyCount:3,spawn:[20,200],exit:[610,68]},
+    {type:'combat',w:640,plats:[[0,224,640,16],[60,200,30,8],[180,210,30,8],[300,200,40,8],[420,210,30,8],[540,200,30,8],[40,170,40,8],[120,180,30,8],[220,160,40,8],[340,170,30,8],[440,160,40,8],[540,170,40,8],[80,130,50,8],[200,120,40,8],[300,130,40,8],[400,120,40,8],[500,130,50,8],[60,90,40,8],[180,80,60,8],[300,90,40,8],[420,80,40,8],[540,90,40,8],[0,50,80,8]],decor:[['fill',0,58,40,166],['fill',600,0,40,224]],enemyCount:4,spawn:[610,200],exit:[10,46]},
+    {type:'treasure',w:640,plats:[[0,224,640,16],[80,190,80,8],[480,190,80,8],[240,160,160,8],[280,128,80,8]],decor:[['fill',0,0,80,224],['fill',560,0,80,224]],enemyCount:2,spawn:[20,200],exit:[610,220]},
   ],
   abyss:[
-    // R1: Two cliffs bridged by pillar platforms; torches on platform tops and cliff
-    {type:'combat',w:640,plats:[[0,40,90,8],[8,48,12,172],[0,224,130,16],[510,224,130,16],[200,88,12,112],[470,88,12,112],[160,100,80,8],[290,140,80,8],[420,100,80,8],[510,40,130,8]],torches:[[45,32,38],[200,92,36],[330,132,36],[460,92,36],[565,32,40]],enemyCount:3,spawn:[20,26],exit:[590,36]},
-    // R2: Rising rift - zigzag path lit by torches along the route
-    {type:'combat',w:640,plats:[[0,208,100,16],[540,224,100,16],[140,180,70,8],[60,152,70,8],[200,124,70,8],[120,96,70,8],[260,72,70,8],[380,96,70,8],[470,72,70,8],[540,44,100,8],[360,200,100,8],[480,176,80,8]],torches:[[175,172,34],[95,144,34],[235,116,34],[155,88,36],[300,64,36],[505,36,40]],enemyCount:3,spawn:[20,194],exit:[580,40]},
-    // R3: Pillar forest - torches atop pillars and key ledges
-    {type:'combat',w:640,plats:[[0,40,90,8],[0,224,80,16],[560,224,80,16],[100,148,16,76],[240,120,16,100],[380,136,16,88],[510,120,16,100],[130,148,100,8],[270,120,100,8],[410,136,100,8],[180,84,80,8],[330,72,80,8],[460,84,80,8],[550,40,90,8],[620,48,12,176]],torches:[[45,32,40],[180,76,34],[220,116,32],[360,128,32],[295,112,32],[500,76,34],[590,32,40]],enemyCount:4,spawn:[20,26],exit:[580,36]},
-    // R4 treasure: brighter - more torches for safe exploration
-    {type:'treasure',w:640,plats:[[0,224,640,16],[100,192,60,8],[480,192,60,8],[200,168,100,8],[340,168,100,8],[280,144,80,8]],torches:[[130,184,44],[250,160,44],[380,160,44],[510,184,44],[310,136,46]],enemyCount:2,spawn:[20,200],exit:[610,220]},
+    {type:'combat',w:640,plats:[[0,40,90,8],[8,48,12,172],[0,224,130,16],[510,224,130,16],[200,88,12,112],[470,88,12,112],[160,100,80,8],[290,140,80,8],[420,100,80,8],[510,40,130,8]],torches:[[45,32,38],[200,92,36],[330,132,36],[460,92,36],[565,32,40]],decor:[['spire',60,90,40,134],['spire',260,110,56,114],['spire',360,80,44,144],['spire',540,110,52,114],['fill',160,108,80,116],['fill',290,148,80,76],['fill',420,108,80,116],['bubble',210,90,4,90],['bubble',476,90,4,90],['bubble',320,140,4,90]],enemyCount:3,spawn:[20,26],exit:[590,36]},
+    {type:'combat',w:640,plats:[[0,208,100,16],[540,224,100,16],[140,180,70,8],[60,152,70,8],[200,124,70,8],[120,96,70,8],[260,72,70,8],[380,96,70,8],[470,72,70,8],[540,44,100,8],[360,200,100,8],[480,176,80,8]],torches:[[175,172,34],[95,144,34],[235,116,34],[155,88,36],[300,64,36],[505,36,40]],decor:[['spire',10,60,40,180],['spire',280,100,70,140],['spire',440,120,60,120],['fill',140,188,70,36],['fill',360,208,100,16],['fill',480,184,80,40],['bubble',50,100,4,110],['bubble',340,130,4,80],['bubble',430,60,4,80]],enemyCount:3,spawn:[20,194],exit:[580,40]},
+    {type:'combat',w:640,plats:[[0,40,90,8],[0,224,80,16],[560,224,80,16],[100,148,16,76],[240,120,16,100],[380,136,16,88],[510,120,16,100],[130,148,100,8],[270,120,100,8],[410,136,100,8],[180,84,80,8],[330,72,80,8],[460,84,80,8],[550,40,90,8],[620,48,12,176]],torches:[[45,32,40],[180,76,34],[220,116,32],[360,128,32],[295,112,32],[500,76,34],[590,32,40]],decor:[['spire',60,110,40,110],['spire',540,110,40,110],['fill',130,156,100,68],['fill',270,128,100,96],['fill',410,144,100,80],['bubble',106,48,4,100],['bubble',246,40,4,80],['bubble',386,50,4,86],['bubble',516,40,4,80]],enemyCount:4,spawn:[20,26],exit:[580,36]},
+    {type:'treasure',w:640,plats:[[0,224,640,16],[60,196,60,8],[160,168,60,8],[80,140,60,8],[200,112,60,8],[100,84,60,8],[220,56,60,8],[280,28,80,8],[420,56,60,8],[500,96,60,8],[440,136,60,8],[520,176,60,8]],torches:[[40,216,40],[180,160,38],[310,20,46],[460,48,38],[560,168,42]],decor:[['spire',0,110,50,130],['spire',590,110,50,130],['fill',60,204,60,20],['fill',160,176,60,48],['fill',80,148,60,76],['fill',200,120,60,104],['fill',100,92,60,132],['fill',220,64,60,160],['bubble',30,60,4,160],['bubble',610,100,4,120],['water',60,222,200,2],['water',380,222,220,2]],enemyCount:2,spawn:[20,200],exit:[610,220]},
   ],
   volcanic:[
-    // R1: Lava staircase - spawn top-right, exit bottom-left
-    {type:'combat',w:640,plats:[[540,40,100,8],[440,80,80,8],[340,120,80,8],[240,160,80,8],[140,200,80,8],[0,224,200,16],[420,224,220,16],[220,192,80,8]],enemyCount:3,spawn:[570,26],exit:[10,220]},
-    // R2: Volcanic core - two side columns, bridges across void center
-    {type:'combat',w:640,plats:[[0,224,160,16],[480,224,160,16],[0,180,80,8],[0,136,80,8],[0,88,80,8],[560,180,80,8],[560,136,80,8],[560,88,80,8],[120,164,80,8],[240,148,80,8],[360,148,80,8],[480,164,80,8],[180,112,80,8],[320,96,80,8],[460,112,80,8],[280,60,80,8]],enemyCount:4,spawn:[20,210],exit:[310,56]},
-    // R3: Dense eruption pillars - climb bottom to top
-    {type:'combat',w:640,plats:[[0,224,100,16],[540,224,100,16],[0,44,100,8],[540,44,100,8],[80,196,60,8],[200,196,60,8],[340,196,60,8],[460,196,60,8],[140,164,60,8],[280,164,60,8],[400,164,60,8],[520,164,60,8],[80,132,60,8],[220,132,60,8],[360,132,60,8],[500,132,60,8],[140,100,60,8],[280,100,60,8],[420,100,60,8],[200,68,60,8],[340,68,60,8]],enemyCount:4,spawn:[20,210],exit:[570,40]},
-    {type:'treasure',w:640,plats:[[0,224,640,16],[80,188,60,8],[500,188,60,8],[240,164,80,8],[320,164,80,8],[280,136,80,8]],enemyCount:2,spawn:[20,200],exit:[610,220]},
+    {type:'combat',w:640,plats:[[540,40,100,8],[440,80,80,8],[340,120,60,8],[256,140,60,8],[140,184,80,8],[0,60,28,140],[304,148,24,92],[0,224,100,16],[100,208,60,32],[160,224,50,16]],decor:[['fill',0,0,640,12],['fill',0,16,60,50],['fill',510,0,130,40],['fill',280,60,80,60],['magma',210,224,94,16],['magma',328,224,312,16],['eruption',248,144,12,80],['eruption',420,148,12,76],['eruption',580,100,12,124],['lava',32,222,56,2]],enemyCount:3,spawn:[570,26],exit:[10,220]},
+    {type:'combat',w:640,plats:[[0,224,160,16],[480,224,160,16],[0,180,80,8],[0,136,80,8],[0,88,80,8],[560,180,80,8],[560,136,80,8],[560,88,80,8],[120,164,80,8],[240,148,80,8],[360,148,80,8],[480,164,80,8],[180,112,80,8],[320,96,80,8],[460,112,80,8],[280,60,80,8]],decor:[['fill',0,0,640,12],['fill',0,12,60,220],['fill',580,12,60,220],['magma',160,224,320,16],['eruption',200,96,12,128],['eruption',430,96,12,128]],enemyCount:4,spawn:[20,210],exit:[310,56]},
+    {type:'combat',w:640,plats:[[0,224,100,16],[540,224,100,16],[0,44,100,8],[540,44,100,8],[80,196,60,8],[200,196,60,8],[340,196,60,8],[460,196,60,8],[140,164,60,8],[280,164,60,8],[400,164,60,8],[520,164,60,8],[80,132,60,8],[220,132,60,8],[360,132,60,8],[500,132,60,8],[140,100,60,8],[280,100,60,8],[420,100,60,8],[200,68,60,8],[340,68,60,8]],decor:[['fill',0,0,640,12],['fill',0,52,60,180],['fill',580,52,60,180],['magma',100,224,440,16],['eruption',160,196,12,28],['eruption',260,164,12,60],['eruption',420,196,12,28]],enemyCount:4,spawn:[20,210],exit:[570,40]},
+    {type:'treasure',w:640,plats:[[0,60,28,140],[612,60,28,140],[28,224,240,16],[372,224,240,16],[240,196,80,8],[320,196,80,8],[280,168,80,8],[280,136,80,8]],decor:[['fill',0,0,640,12],['fill',0,12,28,220],['fill',612,12,28,220],['magma',268,224,104,16],['eruption',314,168,12,56],['lava',40,222,220,2],['lava',380,222,220,2]],enemyCount:2,spawn:[40,200],exit:[600,220]},
   ],
   void:[
-    // R1: Reality fragments - spawn top-left, exit top-right; mid-air platforms blink
-    {type:'combat',w:640,plats:[[0,224,120,16],[520,224,120,16],[0,40,90,8],[8,48,12,172],[200,88,80,8,1.0],[140,160,80,8,2.1],[340,120,80,8,0.5],[280,200,80,8,3.2],[480,88,80,8,1.8],[420,160,80,8,2.8],[550,40,90,8],[628,48,12,172]],enemyCount:3,spawn:[20,26],exit:[580,36]},
-    // R2: Null staircase - alternating blink so a path is always available with timing
-    {type:'combat',w:640,plats:[[160,224,80,8],[400,224,80,8],[80,192,80,8,0.7],[300,192,80,8,3.8],[500,192,80,8,1.1],[140,160,80,8,3.0],[380,160,80,8,1.7],[60,128,80,8],[240,128,80,8,2.2],[440,128,80,8,0.9],[160,96,80,8,3.5],[340,96,80,8,1.4],[500,96,80,8,2.7],[80,64,80,8],[280,64,80,8,1.9],[460,64,80,8,3.1],[240,36,160,8]],enemyCount:4,spawn:[200,210],exit:[310,32]},
-    // R3: The Breaking - diagonal path with scattered blinking sections
-    {type:'combat',w:640,plats:[[0,224,160,16],[480,224,160,16],[0,180,80,8],[100,160,12,60],[140,180,80,8,1.2],[280,200,80,8,2.8],[220,152,80,8,0.4],[360,170,80,8,2.0],[160,120,80,8,3.3],[300,100,80,8,1.6],[440,120,80,8,0.8],[380,80,80,8,2.5],[500,60,80,8],[580,40,60,8]],enemyCount:4,spawn:[20,166],exit:[600,36]},
-    {type:'treasure',w:640,plats:[[120,224,400,16],[200,196,80,8],[360,196,80,8],[280,168,80,8],[300,140,40,8]],enemyCount:2,spawn:[200,210],exit:[490,220]},
+    {type:'combat',w:640,plats:[[0,224,120,16],[520,224,120,16],[0,40,90,8],[8,48,12,172],[200,88,80,8,1.0],[140,160,80,8,2.1],[340,120,80,8,0.5],[280,200,80,8,3.2],[480,88,80,8,1.8],[420,160,80,8,2.8],[550,40,90,8],[628,48,12,172]],decor:[['fill',0,40,20,184],['fill',620,40,20,184],['rift',100,80,120,100],['rift',280,60,140,100],['rift',460,80,120,100],['rift',200,200,80,40],['rift',400,200,80,40]],enemyCount:3,spawn:[20,26],exit:[580,36]},
+    {type:'combat',w:640,plats:[[160,224,80,8],[400,224,80,8],[80,192,80,8,0.7],[300,192,80,8,3.8],[500,192,80,8,1.1],[140,160,80,8,3.0],[380,160,80,8,1.7],[60,128,80,8],[240,128,80,8,2.2],[440,128,80,8,0.9],[160,96,80,8,3.5],[340,96,80,8,1.4],[500,96,80,8,2.7],[80,64,80,8],[280,64,80,8,1.9],[460,64,80,8,3.1],[240,36,160,8]],decor:[['fill',0,0,50,224],['fill',590,0,50,224],['rift',30,100,100,80],['rift',200,60,100,60],['rift',380,100,100,60],['rift',520,140,100,80],['rift',100,200,80,30]],enemyCount:4,spawn:[200,210],exit:[310,32]},
+    {type:'combat',w:640,plats:[[0,224,160,16],[480,224,160,16],[0,180,80,8],[100,160,12,60],[140,180,80,8,1.2],[280,200,80,8,2.8],[220,152,80,8,0.4],[360,170,80,8,2.0],[160,120,80,8,3.3],[300,100,80,8,1.6],[440,120,80,8,0.8],[380,80,80,8,2.5],[500,60,80,8],[580,40,60,8]],decor:[['fill',0,0,60,224],['fill',140,188,80,36],['fill',280,208,80,16],['rift',80,80,120,120],['rift',240,40,100,80],['rift',380,20,140,60],['rift',480,140,100,60]],enemyCount:4,spawn:[20,166],exit:[600,36]},
+    {type:'treasure',w:640,plats:[[120,224,400,16],[200,196,80,8],[360,196,80,8],[280,168,80,8],[300,140,40,8]],decor:[['fill',200,204,80,20],['fill',280,176,80,48],['fill',300,148,40,76],['rift',240,100,160,80],['rift',60,180,100,50],['rift',480,180,100,50]],enemyCount:2,spawn:[200,210],exit:[490,220]},
   ],
   celestial:[
-    // R1: Cloud stairway - bottom-left to top-right
-    {type:'combat',w:640,plats:[[0,224,120,16],[520,224,120,16],[0,200,80,8],[80,176,80,8],[60,152,80,8],[160,176,80,8],[140,148,80,8],[220,124,80,8],[300,148,80,8],[280,120,80,8],[360,96,80,8],[440,120,80,8],[420,92,80,8],[500,68,80,8],[560,44,80,8]],enemyCount:3,spawn:[20,186],exit:[600,40]},
-    // R2: Star temple - floor ascent to top-center spire
-    {type:'combat',w:640,plats:[[0,224,640,16],[60,200,60,8],[60,168,60,8],[60,136,60,8],[60,104,60,8],[520,200,60,8],[520,168,60,8],[520,136,60,8],[520,104,60,8],[160,180,100,8],[380,180,100,8],[180,148,100,8],[360,148,100,8],[200,116,100,8],[340,116,100,8],[240,84,120,8],[280,56,80,8]],enemyCount:4,spawn:[300,210],exit:[310,52]},
-    // R3: The Firmament - grand multi-tier ascending structure
-    {type:'combat',w:640,plats:[[0,224,100,16],[540,224,100,16],[0,40,100,8],[540,44,100,8],[100,180,60,8],[220,196,60,8],[360,196,60,8],[480,180,60,8],[80,148,60,8],[200,160,60,8],[340,160,60,8],[500,148,60,8],[120,116,60,8],[260,128,60,8],[380,128,60,8],[520,116,60,8],[160,84,60,8],[300,96,60,8],[440,84,60,8],[200,52,60,8],[340,52,60,8]],enemyCount:5,spawn:[20,26],exit:[570,40]},
-    {type:'treasure',w:640,plats:[[0,224,640,16],[100,192,80,8],[460,192,80,8],[220,164,100,8],[320,164,100,8],[280,136,80,8]],enemyCount:2,spawn:[20,200],exit:[610,220]},
+    {type:'combat',w:640,plats:[[0,224,120,16],[520,224,120,16],[0,200,80,8],[80,176,80,8],[60,152,80,8],[160,176,80,8],[140,148,80,8],[220,124,80,8],[300,148,80,8],[280,120,80,8],[360,96,80,8],[440,120,80,8],[420,92,80,8],[500,68,80,8],[560,44,80,8]],decor:[['cloud',0,224,640,18],['fill',0,208,80,16],['fill',80,184,80,40],['fill',60,160,80,64],['fill',220,132,80,92],['fill',360,104,80,120],['fill',500,76,80,148],['cloud',0,60,200,40],['cloud',200,30,240,50],['cloud',440,80,200,40],['beam',200,0,14,220],['beam',400,0,14,220]],enemyCount:3,spawn:[20,186],exit:[600,40]},
+    {type:'combat',w:640,plats:[[0,224,640,16],[60,200,60,8],[60,168,60,8],[60,136,60,8],[60,104,60,8],[520,200,60,8],[520,168,60,8],[520,136,60,8],[520,104,60,8],[160,180,100,8],[380,180,100,8],[180,148,100,8],[360,148,100,8],[200,116,100,8],[340,116,100,8],[240,84,120,8],[280,56,80,8]],decor:[['fill',0,60,20,164],['fill',620,60,20,164],['cloud',0,40,200,40],['cloud',200,20,240,40],['cloud',440,40,200,40],['beam',310,0,20,56],['beam',100,0,12,224],['beam',540,0,12,224]],enemyCount:4,spawn:[300,210],exit:[310,52]},
+    {type:'combat',w:640,plats:[[0,224,100,16],[540,224,100,16],[0,40,100,8],[540,44,100,8],[100,180,60,8],[220,196,60,8],[360,196,60,8],[480,180,60,8],[80,148,60,8],[200,160,60,8],[340,160,60,8],[500,148,60,8],[120,116,60,8],[260,128,60,8],[380,128,60,8],[520,116,60,8],[160,84,60,8],[300,96,60,8],[440,84,60,8],[200,52,60,8],[340,52,60,8]],decor:[['cloud',0,218,640,22],['fill',0,48,20,176],['fill',620,52,20,172],['cloud',0,60,200,40],['cloud',240,30,200,40],['cloud',460,60,180,40],['beam',150,0,14,224],['beam',320,0,14,224],['beam',490,0,14,224]],enemyCount:5,spawn:[20,26],exit:[570,40]},
+    {type:'treasure',w:640,plats:[[0,224,640,16],[100,192,80,8],[460,192,80,8],[220,164,100,8],[320,164,100,8],[280,136,80,8]],decor:[['fill',0,100,20,124],['fill',620,100,20,124],['cloud',60,80,200,30],['cloud',380,80,200,30],['beam',310,0,30,144]],enemyCount:2,spawn:[20,200],exit:[610,220]},
   ],
   aquatic:[
-    // R1: Coral Rise — sparse ledges, swim upward to exit
-    {type:'combat',w:640,plats:[[0,224,640,16],[0,192,60,8],[580,160,60,8],[100,172,60,8],[300,156,60,8],[500,140,60,8],[180,124,60,8],[400,108,60,8],[560,88,60,8],[80,76,60,8],[280,60,60,8]],enemyCount:3,spawn:[20,200],exit:[610,56]},
-    // R2: Reef Caverns — swim through gap-filled coral walls
-    {type:'combat',w:640,plats:[[0,224,100,16],[540,224,100,16],[0,168,80,8],[0,112,80,8],[560,168,80,8],[560,112,80,8],[160,196,80,8],[380,196,80,8],[220,152,80,8],[340,136,80,8],[160,100,80,8],[380,80,80,8],[260,48,120,8]],enemyCount:3,spawn:[20,200],exit:[310,44]},
-    // R3: Tidal Gauntlet — diagonal ledges to high exit
-    {type:'combat',w:640,plats:[[0,224,120,16],[520,224,120,16],[80,200,60,8],[200,184,60,8],[140,160,60,8],[320,172,60,8],[240,144,60,8],[400,156,60,8],[300,120,60,8],[460,132,60,8],[360,96,60,8],[500,84,60,8],[420,60,60,8],[560,44,80,8]],enemyCount:4,spawn:[20,200],exit:[610,40]},
-    // R4 (treasure): Sunken Cove — calm central island
-    {type:'treasure',w:640,plats:[[0,224,640,16],[80,192,60,8],[500,192,60,8],[200,168,100,8],[340,168,100,8],[260,136,120,8]],enemyCount:2,spawn:[20,200],exit:[610,220]},
+    {type:'combat',w:640,plats:[[0,224,640,16],[0,192,60,8],[580,160,60,8],[100,172,60,8],[300,156,60,8],[500,140,60,8],[180,124,60,8],[400,108,60,8],[560,88,60,8],[80,76,60,8],[280,60,60,8]],decor:[['fill',0,60,24,164],['fill',616,60,24,164],['kelp',200,160,8,64],['kelp',360,140,8,84],['kelp',480,180,8,44],['bubble',140,60,4,164],['bubble',540,80,4,144]],enemyCount:3,spawn:[20,200],exit:[610,56]},
+    {type:'combat',w:640,plats:[[0,224,100,16],[540,224,100,16],[0,168,80,8],[0,112,80,8],[560,168,80,8],[560,112,80,8],[160,196,80,8],[380,196,80,8],[220,152,80,8],[340,136,80,8],[160,100,80,8],[380,80,80,8],[260,48,120,8]],decor:[['fill',0,48,24,176],['fill',616,48,24,176],['kelp',250,160,8,64],['kelp',380,200,8,24],['bubble',180,130,4,90],['bubble',440,100,4,120]],enemyCount:3,spawn:[20,200],exit:[310,44]},
+    {type:'combat',w:640,plats:[[0,224,120,16],[520,224,120,16],[80,200,60,8],[200,184,60,8],[140,160,60,8],[320,172,60,8],[240,144,60,8],[400,156,60,8],[300,120,60,8],[460,132,60,8],[360,96,60,8],[500,84,60,8],[420,60,60,8],[560,44,80,8]],decor:[['fill',0,60,24,164],['fill',616,60,24,164],['kelp',60,180,8,44],['kelp',580,180,8,44],['bubble',240,80,4,144],['bubble',480,60,4,164]],enemyCount:4,spawn:[20,200],exit:[610,40]},
+    {type:'treasure',w:640,plats:[[0,224,640,16],[80,192,60,8],[500,192,60,8],[200,168,100,8],[340,168,100,8],[260,136,120,8]],decor:[['fill',0,80,24,144],['fill',616,80,24,144],['kelp',60,184,8,40],['kelp',580,184,8,40],['kelp',320,156,8,68],['bubble',320,60,4,76],['water',100,222,440,2]],enemyCount:2,spawn:[20,200],exit:[610,220]},
   ],
 };
 const BOSS_ROOMS={
@@ -1428,18 +1411,17 @@ const DASH_SPEED=8,DASH_DUR=7;
 const BASE_ATK_CD=20,CROSSBOW_ATK_CD=35,TOME_ATK_CD=30;
 
 function daggerHit(){
-  const sx=p.facingR?p.x+PW:p.x-14;
-  const dmg=(has('stomp_dmg')?2:1)*(has('crit')&&Math.random()<0.25?3:1);
-  if(bossEntity&&ov(sx,p.y,14,PH,bossEntity.x,bossEntity.y,bossEntity.w,bossEntity.h))hitBoss(dmg);
-  const doSpin=has('spin_blade');
-  for(let i=enemies.length-1;i>=0;i--){
-    const e=enemies[i];
-    const hit=doSpin?ov(p.x-14,p.y-14,PW+28,PH+28,e.x,e.y,e.w,e.h):ov(sx,p.y,14,PH,e.x,e.y,e.w,e.h);
-    if(hit){
-      if(damageEnemy(i,dmg))burst(e.x+e.w/2,e.y+e.h/2,'#4fc3f7',6);
-      if(has('poison')&&enemies[i]===e)e.poisonTimer=120;
-    }
+  const dir=p.facingR?1:-1;
+  const baseDmg=has('stomp_dmg')?2:1;
+  const hasCrit=has('crit');
+  const hasPoison=has('poison');
+  const dirs=has('spin_blade')?[[1,0],[-1,0],[0,-1],[0,1]]:[[dir,0]];
+  for(const [dx,dy] of dirs){
+    const dmg=baseDmg*(hasCrit&&Math.random()<0.25?3:1);
+    projectiles.push({type:'dagger',x:p.x+PW/2,y:p.y+PH/2,
+      vx:dx*6.5,vy:dy*6.5,life:60,pierce:false,dmg,applyPoison:hasPoison});
   }
+  burst(p.x+(p.facingR?PW:0),p.y+PH/2,'#4fc3f7',4);
 }
 
 function damageEnemy(j,dmg){
@@ -1559,8 +1541,9 @@ function updateProjectiles(){
       if(ov(proj.x-pho,proj.y,phw,phh,e.x,e.y,e.w,e.h)){
         const hit=damageEnemy(j,pdmg);
         if(hit){
-          burst(e.x+e.w/2,e.y+e.h/2,'#ffd700',6);
+          burst(e.x+e.w/2,e.y+e.h/2,proj.type==='dagger'?'#4fc3f7':'#ffd700',6);
           if(proj.rangStun)e.stunTimer=120;
+          if(proj.applyPoison&&enemies[j]===e)enemies[j].poisonTimer=120;
           if(proj.explosive){
             burst(e.x+e.w/2,e.y+e.h/2,'#ff6600',10);
             for(let k=enemies.length-1;k>=0;k--){if(k!==j){const ox=enemies[k].x+enemies[k].w/2,oy=enemies[k].y+enemies[k].h/2,dx2=ox-(e.x+e.w/2),dy2=oy-(e.y+e.h/2);if(Math.sqrt(dx2*dx2+dy2*dy2)<18)damageEnemy(k,1);}}
@@ -1706,7 +1689,7 @@ function updatePlayer(){
     if(run.fusedWeapon){fusionAttack();}else{
     const cdMult=has('fast_blade')||has('reload_cd')?0.6:1;
     if(run.weapon==='dagger'){
-      p.atkTimer=8;p.atkCd=Math.round(BASE_ATK_CD*cdMult);
+      p.atkCd=Math.round(BASE_ATK_CD*cdMult);
       daggerHit();
     } else if(run.weapon==='crossbow'){
       p.atkCd=Math.round((has('rapid_fire')?14:CROSSBOW_ATK_CD)*cdMult);
@@ -2412,8 +2395,126 @@ const DYN_BG={
   },
 };
 
+function drawDecorItem(kind,x,y,w,h,t,th){
+  cx.save();
+  switch(kind){
+    case 'fill':{
+      cx.fillStyle=th.body;cx.fillRect(x,y,w,h);
+      cx.fillStyle=th.seam+'60';
+      for(let tx=Math.ceil(x/8)*8;tx<x+w;tx+=8)cx.fillRect(tx,y,1,h);
+      for(let ty=Math.ceil(y/8)*8;ty<y+h;ty+=8)cx.fillRect(x,ty,w,1);
+      cx.fillStyle='rgba(0,0,0,0.18)';cx.fillRect(x,y,1,h);
+      break;
+    }
+    case 'water':{
+      const sh=Math.sin(t*2.5)*0.25+0.75;
+      cx.fillStyle='rgba(10,30,80,0.82)';cx.fillRect(x,y,w,h);
+      cx.fillStyle=`rgba(40,90,200,${sh*0.5})`;cx.fillRect(x+1,y,w-2,1);
+      const rip=Math.floor(t*3)%3;
+      cx.fillStyle=rip===0?'rgba(80,140,255,0.35)':rip===1?'rgba(60,120,220,0.25)':'rgba(100,160,255,0.3)';
+      cx.fillRect(x+Math.floor(w*0.08),y,Math.floor(w*0.12),1);
+      cx.fillRect(x+Math.floor(w*0.65),y,Math.floor(w*0.1),1);
+      break;
+    }
+    case 'pond':{
+      cx.fillStyle='rgba(8,20,60,0.92)';cx.fillRect(x,y,w,h);
+      cx.fillStyle='rgba(25,60,160,0.5)';cx.fillRect(x+1,y+1,w-2,2);
+      const bt=Math.floor(t*1.5)%6;
+      if(bt<2){cx.fillStyle='rgba(70,130,230,0.4)';cx.fillRect(x+Math.floor(w/2)+bt*4,y+2,1,1);}
+      break;
+    }
+    case 'spire':{
+      const mx=x+w/2;const breathe=Math.sin(t*1.2+x*0.01)*0.2+0.8;
+      cx.fillStyle=th.body;
+      cx.beginPath();cx.moveTo(mx-w/2,y+h);cx.lineTo(mx,y);cx.lineTo(mx+w/2,y+h);cx.closePath();cx.fill();
+      cx.shadowColor=th.accent;cx.shadowBlur=8*breathe;
+      cx.fillStyle=th.accent+'55';cx.fillRect(mx-1,y,2,h);
+      cx.fillRect(mx-Math.floor(w/4),y+Math.floor(h*0.7),Math.floor(w/2),Math.floor(h*0.3));
+      break;
+    }
+    case 'bubble':{
+      const n=3+Math.floor(h/22);
+      for(let i=0;i<n;i++){
+        const rise=(t*22+i*(h/n))%h;
+        const bx=x+w/2+Math.sin(t*1.5+i*1.3)*2;
+        const by=y+h-rise;const r=0.8+(i%2)*0.7;
+        cx.globalAlpha=0.35+0.25*Math.sin(t*2+i);
+        cx.fillStyle=th.accent;
+        cx.beginPath();cx.arc(bx,by,r,0,Math.PI*2);cx.fill();
+      }
+      break;
+    }
+    case 'lava':{
+      const glow=Math.sin(t*2.1)*0.25+0.75;
+      cx.shadowColor='#ff4400';cx.shadowBlur=4;
+      cx.fillStyle='rgba(180,50,0,0.88)';cx.fillRect(x,y,w,h);
+      cx.fillStyle=`rgba(255,110,0,${glow*0.55})`;cx.fillRect(x+2,y,w-4,1);
+      break;
+    }
+    case 'magma':{
+      cx.fillStyle='rgba(100,15,0,0.95)';cx.fillRect(x,y,w,h);
+      cx.shadowColor='#ff4400';cx.shadowBlur=10;
+      cx.fillStyle='rgba(210,70,0,0.82)';cx.fillRect(x+1,y,w-2,2);
+      const bp=Math.floor(t*1.8+x*0.01)%7;
+      if(bp<3){cx.fillStyle='rgba(255,130,0,0.6)';cx.fillRect(x+((bp*29+10)%(Math.max(1,w-4))),y,2,2);}
+      break;
+    }
+    case 'eruption':{
+      const phase=(t*60+x*0.4)%90;
+      if(phase<30){
+        const warn=phase/30;
+        cx.shadowColor='#ff4400';cx.shadowBlur=4+warn*10;
+        cx.fillStyle=`rgba(255,80,0,${warn*0.55})`;cx.fillRect(x,y+h-4,w,4);
+      }else if(phase<60){
+        const prog=(phase-30)/30;const colH=h*prog;
+        cx.shadowColor='#ff6600';cx.shadowBlur=12;
+        cx.fillStyle='#cc3300';cx.fillRect(x,y+h-colH,w,colH);
+        cx.fillStyle='#ff8800';cx.fillRect(x+1,y+h-colH,w-2,2);
+        cx.fillStyle='#ffcc44';cx.fillRect(x+Math.floor(w/2)-1,y+h-colH-2,2,2);
+      }
+      break;
+    }
+    case 'rift':{
+      const breathe=Math.sin(t*0.9+x*0.01)*0.2+0.8;
+      cx.fillStyle='rgba(15,0,30,0.72)';cx.fillRect(x,y,w,h);
+      cx.shadowColor='#7c4dff';cx.shadowBlur=7*breathe;
+      cx.fillStyle=`rgba(124,77,255,${breathe*0.55})`;
+      for(let ry=y;ry<y+h;ry+=4){const jag=hash(Math.floor(ry)*7+Math.floor(x))%3;cx.fillRect(x+jag,ry,2,3);cx.fillRect(x+w-jag-2,ry,2,3);}
+      break;
+    }
+    case 'cloud':{
+      const drift=Math.sin(t*0.3+x*0.005)*4;
+      cx.globalAlpha=0.22;cx.fillStyle='#fff8dc';
+      cx.beginPath();cx.ellipse(x+w*0.3+drift,y+h*0.5,w*0.25,h*0.45,0,0,Math.PI*2);cx.fill();
+      cx.beginPath();cx.ellipse(x+w*0.62+drift*0.7,y+h*0.5,w*0.28,h*0.4,0,0,Math.PI*2);cx.fill();
+      cx.beginPath();cx.ellipse(x+w*0.5+drift*0.4,y+h*0.33,w*0.22,h*0.35,0,0,Math.PI*2);cx.fill();
+      break;
+    }
+    case 'beam':{
+      const alpha=Math.sin(t*0.9+x*0.02)*0.12+0.18;
+      const grd=cx.createLinearGradient(x,y,x,y+h);
+      grd.addColorStop(0,`rgba(255,245,100,${alpha})`);grd.addColorStop(1,'rgba(255,245,100,0)');
+      cx.fillStyle=grd;cx.fillRect(x,y,w,h);
+      break;
+    }
+    case 'kelp':{
+      const segs=Math.max(1,Math.floor(h/7));
+      const segH=h/segs;
+      for(let i=0;i<segs;i++){
+        const sy=y+h-i*segH;const sway=Math.sin(t*1.4+i*0.45+x*0.03)*(i*1.2);const sx=x+w/2+sway;
+        cx.fillStyle=i%2===0?'#2e7d32':'#388e3c';cx.fillRect(sx-2,sy-segH,4,segH);
+        if(i%3===0){cx.fillStyle='#4caf50';cx.fillRect(sx+(i%2?2:-5),sy-segH*0.5,5,2);}
+      }
+      break;
+    }
+  }
+  cx.restore();
+}
+
 // Room decoration — purely visual elements drawn behind platforms
 function drawRoomDecor(){
+  const th=THEMES[curTI()];const t=sec();
+  if(currentRoom.decor){for(const d of currentRoom.decor)drawDecorItem(d[0],d[1],d[2],d[3],d[4],t,th);}
   const k=curThemeKey();
   const seed=run.roomIdx*37+run.themeIdx*101;
   const floorY=224;
@@ -2710,8 +2811,7 @@ function drawPlayer(){
   if(p.dashTimer>0){const _tc=activeTrailCol()||'#aaf';cx.save();cx.shadowColor=_tc;cx.shadowBlur=6;cx.fillStyle=_tc+'66';cx.fillRect(px-p.dashDirX*8,py-p.dashDirY*8,PW,PH-4);cx.restore();}
   // weapon attack visual
   if(p.atkTimer>0){
-    if(run.weapon==='dagger'){cx.save();cx.shadowColor='#4fc3f7';cx.shadowBlur=10;cx.fillStyle='rgba(79,195,247,0.75)';cx.fillRect(p.facingR?px+PW:px-14,py+2,14,10);cx.restore();}
-    else if(run.weapon==='tome'){
+    if(run.weapon==='tome'){
       const maxR=has('blast_aoe')?80:50;
       const prog=1-(p.atkTimer/14);
       const r=maxR*prog;
@@ -3079,6 +3179,13 @@ function drawProjectiles(){
       cx.shadowColor='#ffc040';cx.shadowBlur=7;cx.fillStyle='#ffc040';
       cx.fillRect(Math.round(proj.x-4),Math.round(proj.y-1),8,3);
       cx.fillRect(Math.round(proj.x-1),Math.round(proj.y-4),3,8);
+    } else if(proj.type==='dagger'){
+      const ang=Math.atan2(proj.vy,proj.vx);
+      cx.shadowColor='#4fc3f7';cx.shadowBlur=6;
+      cx.translate(Math.round(proj.x),Math.round(proj.y));cx.rotate(ang);
+      cx.fillStyle='#4fc3f7';cx.fillRect(-5,-1,9,2);
+      cx.fillStyle='#aaddff';cx.fillRect(3,-1,2,2);  // brighter tip
+      cx.fillStyle='#7799bb';cx.fillRect(-7,-1,3,2); // handle
     } else {
       cx.shadowColor='#ffd700';cx.shadowBlur=6;cx.fillStyle='#fff';
       cx.fillRect(Math.round(proj.x-2),Math.round(proj.y-1),4,3);
