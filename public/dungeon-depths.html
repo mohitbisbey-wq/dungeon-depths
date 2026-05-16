@@ -910,7 +910,7 @@ function buildShop(){
 }
 
 // ── Physics step ──────────────────────────────────────────────────────────────
-const GRAV=0.4,MAX_VY=8;
+const GRAV=0.25,MAX_VY=8;
 function isBlinking(plat){return plat[4]&&Math.sin(sec()*3.2+plat[4])<-0.3;}
 function getAllPlats(){
   const s=currentRoom?currentRoom.plats.filter(p=>!isBlinking(p)):[];
@@ -1676,7 +1676,7 @@ function updatePlayer(){
   if(p.onGround||isAquatic)p.jumpsLeft=has('dbl_jump')?2:1;
 
   if(jump&&p.jumpsLeft>0&&!keys['_jHeld']){
-    p.vy=isAquatic?-2.5:isCelestial?-8.2:-6.5;p.jumpsLeft--;keys['_jHeld']=true;
+    p.vy=isAquatic?-2.5:isCelestial?-7.0:-5.2;p.jumpsLeft--;keys['_jHeld']=true;
   } else if(jump&&has('wall_cling')&&p.wallClingDir!==0&&p.jumpsLeft===0&&!keys['_jHeld']){
     p.vy=-6.5;p.vx=p.wallClingDir*4;keys['_jHeld']=true;
   }
