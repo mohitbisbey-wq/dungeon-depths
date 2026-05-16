@@ -2,7 +2,7 @@
 
 A pixel-art roguelite dungeon crawler playable entirely in the browser. No install required — just open the HTML file.
 
-**Version 1.0** — May 2026
+**Version 1.1** — May 2026
 
 ## Play
 
@@ -42,7 +42,7 @@ Or open `public/dungeon-depths.html` directly in Chrome/Firefox (some browsers b
 - **Moving platforms** in Clockwork worlds with conveyor push
 - **Aquatic physics** — swim mechanics, buoyancy, and The Kraken
 - **Run-end stats screen** — depth, world reached, enemies killed, shards, sigils
-- **Settings** — screen-shake toggle (persisted to localStorage)
+- **Settings** — screen-shake and reduce-flashes toggles (persisted to localStorage)
 - Persistent progress saved to `localStorage`
 
 ## Architecture
@@ -67,3 +67,20 @@ npm run serve         # local dev server on :8091
 **Test mode:** Press `T` on the main menu → pick a world → `Space` (normal room), `B` (boss fight), `G` (gauntlet room).
 
 See `AGENTS.md` for engine architecture details and `design/` for the ship tracking docs.
+
+## Patch Notes
+
+### 1.1 — Foundation Patch (May 2026)
+
+- **Reduce Flashes** accessibility setting — disables the boss rage flash and screen burst; toggle in Settings menu
+- **Storm world** — jagged cliff wall formations and mid-ground rock silhouettes added to background
+- **Clockwork world** — large central ceiling cogwheel with connecting axle shafts added to background
+- Win screen text updated to `THE DEPTHS YIELD`
+- Dash trail now shows your unlocked cosmetic trail color
+
+### 1.0 — Initial Release (May 2026)
+
+- 10 worlds, 6 weapons, 13 fusion combos, elite/gauntlet/shrine rooms
+- 10 unique bosses with intro banners, rage phase, death animations
+- Floor scaling (+1 heart, +1 damage every 2 worlds)
+- Full Playwright + Vitest test suite (50 e2e + 34 unit tests)
