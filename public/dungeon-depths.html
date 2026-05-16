@@ -954,16 +954,16 @@ function spawnBoss(themeIdx){
   bossEntity=null;
   p.iframes=120;
   const cfgs=[
-    {name:'THE GREAT SLIME',     hp:6, nSpd:0.65,rSpd:1.1,jN:100,jR:70,mc:1,wpn:true, rAt:0.5, cIf:90,w:28,h:20,atk:null},
-    {name:'THE GEAR TITAN',      hp:12,nSpd:1.0, rSpd:1.8,jN:100,jR:60,mc:3,wpn:true, rAt:0.5, cIf:80,w:30,h:22,atk:'shot'},
-    {name:'THE FROST GOLEM',     hp:16,nSpd:1.1, rSpd:2.1,jN:90, jR:50,mc:4,wpn:true, rAt:0.5, cIf:75,w:32,h:24,atk:'shot'},
-    {name:'THE TEMPEST',         hp:20,nSpd:1.3, rSpd:2.4,jN:80, jR:40,mc:5,wpn:true, rAt:0.55,cIf:70,w:30,h:22,atk:'fan3'},
-    {name:'THE CRYSTAL COLOSSUS',hp:24,nSpd:1.4, rSpd:2.7,jN:70, jR:30,mc:6,wpn:true, rAt:0.6, cIf:60,w:34,h:26,atk:'fan3'},
-    {name:'THE LEVIATHAN',       hp:28,nSpd:0.9, rSpd:1.8,jN:60, jR:28,mc:7,wpn:true, rAt:0.6, cIf:55,w:52,h:10,atk:'fan5'},
-    {name:'THE MAGMA TITAN',     hp:32,nSpd:1.7, rSpd:3.4,jN:55, jR:24,mc:8,wpn:true, rAt:0.65,cIf:50,w:38,h:30,atk:'pool'},
-    {name:'THE VOID LORD',       hp:36,nSpd:1.9, rSpd:3.7,jN:50, jR:20,mc:9,wpn:true, rAt:0.65,cIf:45,w:34,h:28,atk:'phase'},
-    {name:'THE ETERNAL',         hp:40,nSpd:2.0, rSpd:4.0,jN:45, jR:16,mc:10,wpn:true,rAt:0.7, cIf:40,w:38,h:32,atk:'beam'},
-    {name:'THE KRAKEN',          hp:44,nSpd:2.2, rSpd:4.3,jN:40, jR:14,mc:11,wpn:true,rAt:0.7, cIf:35,w:40,h:34,atk:'fan5'},
+    {name:'THE GREAT SLIME',     hp:6, nSpd:0.5, rSpd:0.85,jN:100,jR:70,mc:1,wpn:true, rAt:0.5, cIf:90,w:28,h:20,atk:null},
+    {name:'THE GEAR TITAN',      hp:12,nSpd:0.75,rSpd:1.4, jN:100,jR:60,mc:3,wpn:true, rAt:0.5, cIf:80,w:30,h:22,atk:'shot'},
+    {name:'THE FROST GOLEM',     hp:16,nSpd:0.85,rSpd:1.6, jN:90, jR:50,mc:4,wpn:true, rAt:0.5, cIf:75,w:32,h:24,atk:'shot'},
+    {name:'THE TEMPEST',         hp:20,nSpd:1.0, rSpd:1.8, jN:80, jR:40,mc:5,wpn:true, rAt:0.55,cIf:70,w:30,h:22,atk:'fan3'},
+    {name:'THE CRYSTAL COLOSSUS',hp:24,nSpd:1.1, rSpd:2.0, jN:70, jR:30,mc:6,wpn:true, rAt:0.6, cIf:60,w:34,h:26,atk:'fan3'},
+    {name:'THE LEVIATHAN',       hp:28,nSpd:0.7, rSpd:1.4, jN:60, jR:28,mc:7,wpn:true, rAt:0.6, cIf:55,w:52,h:10,atk:'fan5'},
+    {name:'THE MAGMA TITAN',     hp:32,nSpd:1.3, rSpd:2.6, jN:55, jR:24,mc:8,wpn:true, rAt:0.65,cIf:50,w:38,h:30,atk:'pool'},
+    {name:'THE VOID LORD',       hp:36,nSpd:1.4, rSpd:2.8, jN:50, jR:20,mc:9,wpn:true, rAt:0.65,cIf:45,w:34,h:28,atk:'phase'},
+    {name:'THE ETERNAL',         hp:40,nSpd:1.5, rSpd:3.0, jN:45, jR:16,mc:10,wpn:true,rAt:0.7, cIf:40,w:38,h:32,atk:'beam'},
+    {name:'THE KRAKEN',          hp:44,nSpd:1.7, rSpd:3.2, jN:40, jR:14,mc:11,wpn:true,rAt:0.7, cIf:35,w:40,h:34,atk:'fan5'},
   ];
   const c=cfgs[themeIdx]||cfgs[0];
   const tc=cfgs[curTI()]||cfgs[0];
@@ -1662,7 +1662,7 @@ function updatePlayer(){
   const atkKey=pressed('KeyZ')||pressed('KeyX');
 
   if(p.frozenFr>0)p.frozenFr--;
-  const spd=(has('speed_boost')?2.0:1.6)*(p.frozenFr>0?0.5:1);
+  const spd=(has('speed_boost')?1.5:1.2)*(p.frozenFr>0?0.5:1);
   const accel=isFrozen&&p.onGround?0.08:0.3;
   const decel=isFrozen&&p.onGround?0.02:0.25;
   if(left){
@@ -1859,7 +1859,7 @@ function updateEnemyType(e){
       const droneHover=(e.platY||224)-62;
       e.vy+=(droneHover-e.y)*0.04-GRAV;
       e.vy=clamp(e.vy,-3.5,2.5);
-      e.vx=lerp(e.vx,pdx>0?0.5:-0.5,0.04);
+      e.vx=lerp(e.vx,pdx>0?0.38:-0.38,0.04);
       if(e.atkCd<=0){
         e.atkCd=75+Math.floor(Math.random()*35);
         enemyProjs.push({x:ecx,y:e.y+e.h,vx:pdx/pdist,vy:2.8,life:90,col:THEMES[eti].accent,r:2});
@@ -1868,9 +1868,9 @@ function updateEnemyType(e){
     case 'sawbot':
       if(!e.sawCharging&&e.atkCd<=0&&Math.abs(pdx)<150&&e.onGround){
         e.sawCharging=true;e.atkCd=60+Math.floor(Math.random()*30);
-        e.vx=(pdx>0?1:-1)*2.8;burst(ecx,ecy,'#ff9900',6);sfx('hit');
+        e.vx=(pdx>0?1:-1)*2.1;burst(ecx,ecy,'#ff9900',6);sfx('hit');
       }
-      if(e.sawCharging){e.vx=(e.vx>0?1:-1)*2.8;if(e.atkCd<=15)e.sawCharging=false;}
+      if(e.sawCharging){e.vx=(e.vx>0?1:-1)*2.1;if(e.atkCd<=15)e.sawCharging=false;}
       break;
     case 'turret':
       e.vx=0;
@@ -1885,9 +1885,9 @@ function updateEnemyType(e){
     case 'lavabat':
       if(e.atkCd<=0&&e.onGround){
         e.atkCd=95+Math.floor(Math.random()*40);
-        e.vy=-7.5;e.vx=(pdx>0?1:-1)*1.6;burst(ecx,ecy,'#ff4400',8);sfx('hit');
+        e.vy=-7.5;e.vx=(pdx>0?1:-1)*1.2;burst(ecx,ecy,'#ff4400',8);sfx('hit');
       }
-      if(!e.onGround)e.vx=lerp(e.vx,(pdx>0?1:-1)*2.0,0.03);
+      if(!e.onGround)e.vx=lerp(e.vx,(pdx>0?1:-1)*1.5,0.03);
       break;
     case 'voideye':
       if(e.atkCd<=0){
@@ -1904,7 +1904,7 @@ function updateEnemyType(e){
   if(eti===1){ // Clockwork: periodic overclock burst
     if(e._ock===undefined)e._ock=Math.floor(Math.random()*140);
     e._ock++;
-    if(e._ock%140<28&&e.onGround&&e.type!=='turret')e.vx=clamp(e.vx*1.04,-1.9,1.9);
+    if(e._ock%140<28&&e.onGround&&e.type!=='turret')e.vx=clamp(e.vx*1.04,-1.4,1.4);
   }
   if(eti===5){ // Abyss: ground enemies fire tracking orbs
     if(e.type!=='drone'&&e.type!=='turret'){
@@ -1985,7 +1985,7 @@ function updateEnemies(){
       if(e._burrowFr<=0){e._burrowed=false;e.hp=e.maxHp;burst(e.x+e.w/2,e.y+e.h/2,'#7ec850',10);}
       continue;
     }
-    if(e.onGround&&!e.sawCharging)e.vx=clamp(e.vx,-0.8,0.8);
+    if(e.onGround&&!e.sawCharging)e.vx=clamp(e.vx,-0.6,0.6);
     if(e.x<=e.platX){e.vx=Math.abs(e.vx);}
     if(e.x+e.w>=e.platRight){e.vx=-Math.abs(e.vx);}
     physStep(e,currentRoom.plats);
