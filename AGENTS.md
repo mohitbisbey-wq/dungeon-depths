@@ -20,7 +20,8 @@ Single-file pixel-art roguelite. **All game logic lives in `public/dungeon-depth
 | `src/tests/*.test.js` | Vitest unit tests (physics, upgrades, gauntlet logic) |
 | `src/tests/e2e/game.test.js` | Playwright e2e tests (50 tests, all worlds + bosses) |
 | `src/game/utils/physics.js` | Thin wrapper mirroring `ov()` from HTML |
-| `src/game/data/upgrades.js` | Thin wrapper mirroring upgrade pool from HTML |
+| `src/game/utils/gauntlet.js` | Thin wrapper mirroring `displayWave` / `shouldRollGauntlet` from HTML (`drawGauntletOverlay()` + `nextRoom()`) |
+| `src/game/data/upgrades.js` | Thin wrapper mirroring upgrade pool + `pickUpgrades` / `nextThemeAction` from HTML |
 | `AGENTS.md` | This file — engine facts + ship status |
 | `design/` | Design spec cards + ship tracking docs |
 | `design/POLISH_CHECKLIST.md` | 1.0 ship-blockers — all 11 `[x]`, historical record |
@@ -50,7 +51,7 @@ Single-file pixel-art roguelite. **All game logic lives in `public/dungeon-depth
 ## 3. Test Suite
 
 ```bash
-npm test              # vitest unit tests (34 tests) — must stay green before every commit
+npm test              # vitest unit tests (37 tests) — must stay green before every commit
 npm run test:watch    # vitest watch mode
 npm run test:e2e      # Playwright browser tests (50 tests) — full game smoke + regression
 npm run test:e2e:ui   # Playwright with interactive UI
@@ -136,6 +137,7 @@ roomClearFallbackTimer  — auto-clears stuck rooms after 3600f (60s) of no kill
 | `applyUpgrade()` / `revokeUpgrade()` | Use `run.masterSigilLoaner` + extend `has(id)` to also check it. Re-roll on `loadRoom()` overwrites prior loan. |
 | Enemy projectile routing | ALL enemy shots go to `enemyProjs[]`. Mirror and Amalgam shots both use `enemyProjs[]`. Never `projectiles[]`. |
 | `ENEMY_TYPES_BY_THEME[10]` | Add `|| []` guard in `spawnEnemies` lookup. Amalgam arena uses `THEMES[10]` sentinel (add dummy entry). |
+| `pickUpgrades` unknown weapon id | `wPool = (run.weapon && UPGRADE_POOL[run.weapon]) || []` — degrade to universal-only rather than throw on a stale/fused weapon id. Same `|| []` guard pattern as the `ENEMY_TYPES_BY_THEME` row above. Applied in both `public/dungeon-depths.html` and the `src/game/data/upgrades.js` wrapper. |
 | Forge routing from Gauntlet | `run.gauntletForge=true` latch checked when `SHOP_SCREEN` exits; routes to Amalgam arena (V4.1 Commit D). |
 | Fusion combo scope (Amalgam) | 4 named launch combos (Twin Edge, Magic Bolt, Hex Bomb, Recall Lance) + 9 stubs fall back to generic gold pattern. |
 
