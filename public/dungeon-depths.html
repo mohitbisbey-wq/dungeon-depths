@@ -480,7 +480,7 @@ const UPGRADE_POOL={
 };
 function has(id){return run.upgrades.includes(id);}
 function pickUpgrades(){
-  const wPool=run.weapon?UPGRADE_POOL[run.weapon]:[];
+  const wPool=(run.weapon&&UPGRADE_POOL[run.weapon])||[];
   const DASH_IDS=['extra_dash','dash_cd'];
   const noWeapon=run.weapon===null;
   const wc=run.weapon?WEAPON_COLORS[run.weapon]:'#aaa';
