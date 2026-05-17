@@ -57,7 +57,7 @@ Everything lives in a single file: `public/dungeon-depths.html` (~4600 lines of 
 ## Development
 
 ```bash
-npm test              # vitest unit tests (34 tests)
+npm test              # vitest unit tests (37 tests)
 npm run test:watch    # watch mode
 npm run test:e2e      # Playwright browser tests (50 tests — all worlds + bosses)
 npm run test:all      # both suites

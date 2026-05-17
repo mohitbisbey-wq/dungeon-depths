@@ -129,6 +129,28 @@ describe('pickUpgrades', () => {
     expect(choices.length).toBe(1);
     expect(choices[0].id).toBe(keepId);
   });
+
+  it('degrades to universal-only on an unknown weapon id (does not throw)', () => {
+    // Regression guard: prior to the `|| []` fallback, an unknown weapon id
+    // (e.g. a stale/fused weapon string) made `[...universal, ...undefined]`
+    // throw "wPool is not iterable" and crash the upgrade picker mid-run.
+    const universalIds = new Set(UPGRADE_POOL.universal.map(u => u.id));
+    expect(() => pickUpgrades([], 'not_a_real_weapon')).not.toThrow();
+    const choices = pickUpgrades([], 'not_a_real_weapon');
+    expect(choices.length).toBe(3);
+    for (const u of choices) {
+      expect(universalIds.has(u.id), `unexpected id ${u.id}`).toBe(true);
+    }
+  });
+
+  it('returns an empty array when every option is owned', () => {
+    // Defensive: caller (drawUpgradePick) should handle 0-length gracefully.
+    const allOwned = [
+      ...UPGRADE_POOL.universal.map(u => u.id),
+      ...UPGRADE_POOL.dagger.map(u => u.id),
+    ];
+    expect(pickUpgrades(allOwned, 'dagger')).toEqual([]);
+  });
 });
 
 // ── nextThemeAction ───────────────────────────────────────────────────────────

@@ -40,12 +40,17 @@ export const UPGRADE_POOL = {
  * Pick 3 upgrade choices from the combined universal + weapon pool,
  * excluding any already owned.
  *
+ * Unknown weapon ids degrade gracefully to the universal-only pool — this
+ * mirrors the `|| []` guard pattern used elsewhere in the engine (see
+ * AGENTS.md §9, `ENEMY_TYPES_BY_THEME`) so a stale/fused weapon id can never
+ * crash the upgrade picker mid-run.
+ *
  * @param {string[]} owned - upgrade ids already in run.upgrades
  * @param {string|null} weapon - current weapon id, or null if none chosen yet
  * @returns {object[]} up to 3 upgrade objects
  */
 export function pickUpgrades(owned, weapon) {
-  const wPool = weapon ? UPGRADE_POOL[weapon] : [];
+  const wPool = (weapon && UPGRADE_POOL[weapon]) || [];
   const combined = [...UPGRADE_POOL.universal, ...wPool].filter(u => !owned.includes(u.id));
   const out = [];
   while (out.length < 3 && combined.length > 0) {
